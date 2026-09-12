@@ -1,0 +1,19 @@
+(() => {
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const header=$('#header'), progress=$('#progress');
+  function onScroll(){header?.classList.toggle('scrolled',scrollY>20);const d=document.documentElement,max=d.scrollHeight-d.clientHeight;progress.style.width=(max?d.scrollTop/max*100:0)+'%';if(innerWidth>950){$$('.parallax').forEach(el=>{const r=el.getBoundingClientRect(),speed=Number(el.dataset.speed||.03);el.style.transform=`perspective(1000px) rotateY(-4deg) rotateX(2deg) translateY(${r.top*speed}px)`})}}
+  addEventListener('scroll',onScroll,{passive:true});onScroll();
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});$$('.reveal').forEach(x=>io.observe(x));
+  async function getFallback(){try{const r=await fetch('/content/community.json',{cache:'no-store'});return r.ok?await r.json():{}}catch{return {}}}
+  async function loadSettings(){
+    let s=await getFallback();
+    if(window.DehaxAPI?.config?.supabaseUrl){try{const r=await window.DehaxAPI.supabaseFetch('/rest/v1/app_settings?key=in.(hero_youtube_id,pro_price,discord_url,whatsapp_url)&select=key,value');if(r.ok){for(const row of await r.json())s[row.key]=typeof row.value==='string'?row.value:(row.value?.value??row.value)}}catch{}}
+    if(s.pro_price) $('#proPrice').textContent=String(s.pro_price).replace('.',',');
+    const setLink=(id,url)=>{const a=$(id);if(url){a.href=url;a.target='_blank';a.rel='noopener';a.classList.remove('disabled')}};setLink('#discordLink',s.discord_url);setLink('#whatsappLink',s.whatsapp_url);
+    if(s.hero_youtube_id){const id=String(s.hero_youtube_id).replace(/[^A-Za-z0-9_-]/g,'');if(id)$('#heroVideo').innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1" title="Apresentação Comunidade DeHax" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`}
+  }
+  function loadMetaPixel(){const id=window.DEHAX_CONFIG?.metaPixelId;if(!id||window.fbq)return;!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init',id);fbq('track','PageView');}
+  function installMetaPixel(){const id=window.DEHAX_CONFIG?.metaPixelId;if(!id)return;const consent=localStorage.getItem('dehax_metrics_consent');if(consent==='yes'){loadMetaPixel();return}if(consent==='no')return;const el=document.createElement('div');el.className='cookie-banner';el.innerHTML='<p><b>Privacidade e métricas.</b> Podemos usar o Meta Pixel para medir o desempenho dos anúncios. Você pode continuar sem essas métricas.</p><div class="cookie-actions"><button data-no>CONTINUAR SEM</button><button class="accept" data-yes>ACEITAR MÉTRICAS</button></div>';document.body.appendChild(el);el.querySelector('[data-no]').onclick=()=>{localStorage.setItem('dehax_metrics_consent','no');el.remove()};el.querySelector('[data-yes]').onclick=()=>{localStorage.setItem('dehax_metrics_consent','yes');el.remove();loadMetaPixel()}}
+  function preserveAttribution(){const p=new URLSearchParams(location.search),keep=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid'];const a={};keep.forEach(k=>{if(p.get(k))a[k]=p.get(k)});if(Object.keys(a).length)sessionStorage.setItem('dehax_attribution',JSON.stringify(a));$$('a[href^="/entrar/"]').forEach(link=>{const u=new URL(link.href,location.origin);for(const [k,v] of Object.entries(a))u.searchParams.set(k,v);link.href=u.pathname+u.search})}
+  addEventListener('DOMContentLoaded',()=>{preserveAttribution();installMetaPixel();setTimeout(loadSettings,0)});
+})();

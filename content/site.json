@@ -1,0 +1,119 @@
+{
+  "site_name": "DeHax Editor",
+  "logo": "/assets/brand/dehax-logo.png",
+  "status": "Disponível para novos projetos",
+  "hero_line_1": "DEHAX",
+  "hero_line_2": "VIDEO",
+  "hero_line_3": "EDITOR",
+  "hero_text": "Edição para YouTube, gameplays e conteúdo gamer. Ritmo, impacto visual e narrativa para transformar gravações em vídeos que seguram atenção.",
+  "hero_primary": "Ver trabalhos",
+  "hero_secondary": "Vamos trabalhar juntos",
+  "preview_image": "/assets/preview-placeholder.svg",
+  "timeline_image": "/assets/timeline-placeholder.svg",
+  "marquee": [
+    "PREMIERE PRO",
+    "AFTER EFFECTS",
+    "DAVINCI RESOLVE",
+    "CAPCUT",
+    "I.A.",
+    "MOTION",
+    "STORYTELLING",
+    "GAMEPLAY",
+    "YOUTUBE",
+    "SHORTS"
+  ],
+  "work_title": "Vídeos que\nfalam por mim.",
+  "work_text": "Seleção de trabalhos para YouTube, gameplays, shorts e conteúdo digital.",
+  "projects": [
+    {
+      "title": "Gameplay Edit 01",
+      "meta": "Gameplay • Long-form • Storytelling",
+      "category": "Gameplay",
+      "youtube_url": "",
+      "thumbnail": "",
+      "featured": true
+    },
+    {
+      "title": "Challenge Edit",
+      "meta": "Gaming • YouTube",
+      "category": "Gameplay",
+      "youtube_url": "",
+      "thumbnail": "",
+      "featured": false
+    },
+    {
+      "title": "Action Cut",
+      "meta": "Motion • Fast paced",
+      "category": "Motion",
+      "youtube_url": "",
+      "thumbnail": "",
+      "featured": false
+    },
+    {
+      "title": "Shorts Pack",
+      "meta": "Short-form • Vertical",
+      "category": "Shorts",
+      "youtube_url": "",
+      "thumbnail": "",
+      "featured": false
+    },
+    {
+      "title": "Gameplay Edit 05",
+      "meta": "Gaming • Retention",
+      "category": "Gameplay",
+      "youtube_url": "",
+      "thumbnail": "",
+      "featured": false
+    }
+  ],
+  "skills_title": "Ferramentas.\nSem enrolação.",
+  "skills_text": "O software é ferramenta. O foco é ritmo, timing, retenção, clareza e acabamento.",
+  "skills": [
+    {
+      "name": "Adobe Premiere Pro",
+      "use": "Edição • ritmo • narrativa"
+    },
+    {
+      "name": "After Effects",
+      "use": "Motion • VFX • composição"
+    },
+    {
+      "name": "DaVinci Resolve",
+      "use": "Color • finishing • áudio"
+    },
+    {
+      "name": "CapCut",
+      "use": "Shorts • social • agilidade"
+    },
+    {
+      "name": "Inteligência Artificial",
+      "use": "Workflow • criação • apoio visual"
+    }
+  ],
+  "about_title": "Sobre mim.",
+  "about_image": "",
+  "about_paragraphs": [
+    "Sou editor de vídeo focado em conteúdo digital, YouTube e entretenimento. Meu trabalho combina edição, motion, acabamento e novas ferramentas para construir vídeos mais dinâmicos sem apagar a identidade de quem está na frente da câmera.",
+    "Para gameplays, o objetivo é simples: tirar o tempo morto e valorizar os momentos que fazem o público continuar assistindo."
+  ],
+  "stats": [
+    {
+      "value": "YouTube",
+      "label": "Long-form"
+    },
+    {
+      "value": "Gaming",
+      "label": "Foco principal"
+    },
+    {
+      "value": "Remote",
+      "label": "Disponível"
+    }
+  ],
+  "contact_title": "Seu próximo vídeo\npode começar aqui.",
+  "contact_text": "Gameplay, vlog gamer, vídeo longo, shorts ou pacote recorrente para canal.",
+  "email": "contato@dehaxeditor.com",
+  "instagram": "",
+  "whatsapp": "",
+  "footer_tools": "Premiere • After Effects • DaVinci • CapCut • AI"
+}

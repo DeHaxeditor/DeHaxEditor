@@ -1,0 +1,3 @@
+import crypto from 'node:crypto';
+import { json,parseBody,requireProfile,safeFilename,errResponse,presignR2 } from './_lib.mjs';
+export const handler=async event=>{if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});try{await requireProfile(event,{admin:true});const {filename,contentType='application/octet-stream',kind='asset'}=parseBody(event);if(!filename)return json(400,{error:'Nome de arquivo ausente.'});const prefix={asset:'assets',preview:'previews',cover:'covers'}[kind]||'assets';const key=`${prefix}/${new Date().toISOString().slice(0,7)}/${crypto.randomUUID()}-${safeFilename(filename)}`;const uploadUrl=presignR2({method:'PUT',key,expires:900});return json(200,{uploadUrl,key,expiresIn:900});}catch(e){return errResponse(e)}};

@@ -1,0 +1,12 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://SEU-DOMINIO.com",
+      "https://SEU-SITE.netlify.app"
+    ],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+<rect width="800" height="450" fill="#0b1016"/>
+<circle cx="650" cy="75" r="230" fill="#00eaff" opacity=".05"/><circle cx="130" cy="390" r="230" fill="#ff294d" opacity=".06"/>
+<path d="M0 70H800M0 140H800M0 210H800M0 280H800M0 350H800M100 0V450M200 0V450M300 0V450M400 0V450M500 0V450M600 0V450M700 0V450" stroke="#fff" stroke-opacity=".025"/>
+<text x="400" y="225" fill="#fff" fill-opacity=".06" font-family="Arial Black,Arial" font-size="84" text-anchor="middle">PREVIEW</text>
+<text x="400" y="270" fill="#00eaff" fill-opacity=".34" font-family="monospace" font-size="14" text-anchor="middle" letter-spacing="4">UPLOAD YOUR FRAME</text>
+</svg>

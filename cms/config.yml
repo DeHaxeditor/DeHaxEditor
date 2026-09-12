@@ -1,0 +1,71 @@
+backend:
+  name: github
+  repo: haxestudioo/dehax-editor
+  branch: main
+
+media_folder: "assets/uploads"
+public_folder: "/assets/uploads"
+
+collections:
+  - name: "site"
+    label: "DeHax Editor"
+    files:
+      - label: "Conteúdo do site"
+        name: "content"
+        file: "content/site.json"
+        format: "json"
+        fields:
+          - {label: "Nome do site", name: "site_name", widget: "string"}
+          - {label: "Logo (opcional)", name: "logo", widget: "image", required: false, hint: "Se ficar vazio, o texto DeHax Editor continua no topo."}
+          - {label: "Status / disponibilidade", name: "status", widget: "string"}
+          - {label: "Abertura — linha 1", name: "hero_line_1", widget: "string"}
+          - {label: "Abertura — linha 2", name: "hero_line_2", widget: "string"}
+          - {label: "Abertura — linha 3", name: "hero_line_3", widget: "string"}
+          - {label: "Abertura — texto curto", name: "hero_text", widget: "text"}
+          - {label: "Botão principal", name: "hero_primary", widget: "string"}
+          - {label: "Botão secundário", name: "hero_secondary", widget: "string"}
+          - {label: "MOLDURA — imagem superior / Preview", name: "preview_image", widget: "image", required: false, hint: "A moldura permanece. Apenas esta imagem é substituída."}
+          - {label: "MOLDURA — imagem inferior / Timeline", name: "timeline_image", widget: "image", required: false, hint: "A moldura permanece. Apenas esta imagem é substituída."}
+          - label: "Faixa animada de ferramentas"
+            name: "marquee"
+            widget: "list"
+            field: {label: "Item", name: "item", widget: "string"}
+          - {label: "Portfólio — título", name: "work_title", widget: "string", hint: "Use \\n para quebrar a linha."}
+          - {label: "Portfólio — texto curto", name: "work_text", widget: "text"}
+          - label: "Portfólio — vídeos"
+            name: "projects"
+            widget: "list"
+            summary: "{{fields.title}} — {{fields.category}}"
+            fields:
+              - {label: "Título", name: "title", widget: "string"}
+              - {label: "Descrição curta", name: "meta", widget: "string", required: false}
+              - {label: "Categoria", name: "category", widget: "select", options: ["Gameplay", "Shorts", "Motion", "Vlog", "Outro"]}
+              - {label: "Link do YouTube", name: "youtube_url", widget: "string", required: false, hint: "Cole o link normal do YouTube, youtu.be ou Shorts."}
+              - {label: "Thumbnail personalizada (opcional)", name: "thumbnail", widget: "image", required: false, hint: "Se deixar vazio e houver link do YouTube, o site tenta usar a thumbnail do próprio vídeo."}
+              - {label: "Card em destaque / largura total", name: "featured", widget: "boolean", default: false}
+          - {label: "Habilidades — título", name: "skills_title", widget: "string", hint: "Use \\n para quebrar a linha."}
+          - {label: "Habilidades — texto curto", name: "skills_text", widget: "text"}
+          - label: "Habilidades — ferramentas"
+            name: "skills"
+            widget: "list"
+            fields:
+              - {label: "Nome", name: "name", widget: "string"}
+              - {label: "Uso / especialidade", name: "use", widget: "string"}
+          - {label: "Sobre — título", name: "about_title", widget: "string"}
+          - {label: "Sobre — foto", name: "about_image", widget: "image", required: false}
+          - label: "Sobre — parágrafos"
+            name: "about_paragraphs"
+            widget: "list"
+            field: {label: "Parágrafo", name: "paragraph", widget: "text"}
+          - label: "Sobre — destaques rápidos"
+            name: "stats"
+            widget: "list"
+            fields:
+              - {label: "Valor", name: "value", widget: "string"}
+              - {label: "Legenda", name: "label", widget: "string"}
+          - {label: "Contato — título", name: "contact_title", widget: "string", hint: "Use \\n para quebrar a linha."}
+          - {label: "Contato — texto", name: "contact_text", widget: "text"}
+          - {label: "Contato — e-mail", name: "email", widget: "string", required: false}
+          - {label: "Contato — Instagram (URL completa)", name: "instagram", widget: "string", required: false}
+          - {label: "Contato — WhatsApp (URL completa)", name: "whatsapp", widget: "string", required: false, hint: "Ex.: https://wa.me/5511999999999"}
+          - {label: "Rodapé — ferramentas", name: "footer_tools", widget: "string", required: false}

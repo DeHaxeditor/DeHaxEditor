@@ -1,4 +1,4 @@
-DEHAX EDITOR — PLATAFORMA V2
+DEHAX EDITOR — PLATAFORMA V2.2
 ============================
 
 O projeto agora possui área de membros, landing page, Admin Control Center,

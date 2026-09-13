@@ -1,0 +1,13 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://SEU-DOMINIO.com.br",
+      "https://www.SEU-DOMINIO.com.br",
+      "http://localhost:8765"
+    ],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]

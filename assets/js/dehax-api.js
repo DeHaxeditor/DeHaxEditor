@@ -32,7 +32,7 @@
     if (demoEnabled && !config.supabaseUrl) {
       const role = /admin/i.test(email) ? 'admin' : 'member';
       const plan = /pro/i.test(email) ? 'pro' : 'free';
-      const profile = {id:'demo-user',email,display_name:email.split('@')[0]||'Editor',role,plan,subscription_status:plan==='pro'?'authorized':'inactive'};
+      const profile = {id:'demo-user',email,display_name:email.split('@')[0]||'Editor',role,plan,subscription_status:plan==='pro'?'authorized':'inactive',pro_started_at:plan==='pro'?new Date(Date.now()-2*86400000).toISOString():null,access_expires_at:null,created_at:new Date(Date.now()-30*86400000).toISOString()};
       localStorage.setItem(DEMO_KEY, JSON.stringify(profile));
       setSession({access_token:'demo-token',user:{id:'demo-user',email}});
       await sleep(250); return {user:{id:'demo-user',email},profile,demo:true};
@@ -79,7 +79,7 @@
   async function currentProfile(){
     const user = await currentUser(); if(!user) return null;
     if(token()==='demo-token') return JSON.parse(localStorage.getItem(DEMO_KEY)||'null');
-    const r=await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,email,role,plan,subscription_status,subscription_id,is_suspended,created_at`);
+    const r=await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,email,role,plan,subscription_status,subscription_id,is_suspended,pro_started_at,access_expires_at,attribution,created_at`);
     if(!r.ok) throw new Error('Não foi possível carregar o perfil.');
     const rows=await r.json();
     return {...(rows[0]||{}),email:user.email,user_metadata:user.user_metadata};
@@ -96,8 +96,18 @@
   const DEMO_TUTORIALS = [
     {id:'t1',title:'Ritmo de edição para gameplays',description:'Como remover tempo morto sem destruir a personalidade do criador.',category:'Edição',duration_label:'18 min',access_level:'free',status:'published',featured:true,order_index:1,thumbnail_url:''},
     {id:'t2',title:'Sound Design que segura atenção',description:'Camadas de SFX, impactos e silêncio na prática.',category:'Sound Design',duration_label:'26 min',access_level:'pro',status:'published',featured:true,order_index:2,thumbnail_url:''},
-    {id:'t3',title:'Memes sem deixar a edição cansativa',description:'Timing, repetição e contraste para humor em gameplay.',category:'Storytelling',duration_label:'21 min',access_level:'pro',status:'published',featured:false,order_index:3,thumbnail_url:''}
+    {id:'t3',title:'Memes sem deixar a edição cansativa',description:'Timing, repetição e contraste para humor em gameplay.',category:'Storytelling',duration_label:'21 min',access_level:'pro',status:'published',featured:false,order_index:3,thumbnail_url:'',unlock_after_days:0},
+    {id:'t4',title:'Workflow avançado: retenção e narrativa',description:'Tutorial bônus com liberação programada 7 dias após a primeira ativação do PRO.',category:'Workflow',duration_label:'34 min',access_level:'pro',status:'published',featured:true,order_index:4,thumbnail_url:'',unlock_after_days:7}
   ];
+
+  const DEMO_CATEGORIES=[
+    {id:'c-sfx',name:'SFX',slug:'sfx',status:'active',sort_order:10},{id:'c-memes',name:'Memes',slug:'memes',status:'active',sort_order:20},{id:'c-musicas',name:'Músicas',slug:'musicas',status:'active',sort_order:30},{id:'c-trans',name:'Transições',slug:'transicoes',status:'active',sort_order:40},{id:'c-over',name:'Overlays',slug:'overlays',status:'active',sort_order:50},{id:'c-presets',name:'Presets',slug:'presets',status:'active',sort_order:60}
+  ];
+  const DEMO_SUBCATEGORIES=[
+    {id:'sc1',category_id:'c-sfx',name:'Whoosh',slug:'whoosh',status:'active',sort_order:10},{id:'sc2',category_id:'c-sfx',name:'Impact',slug:'impact',status:'active',sort_order:20},{id:'sc3',category_id:'c-memes',name:'Reaction',slug:'reaction',status:'active',sort_order:10},{id:'sc4',category_id:'c-musicas',name:'Electronic',slug:'electronic',status:'active',sort_order:10},{id:'sc5',category_id:'c-trans',name:'Glitch',slug:'glitch',status:'active',sort_order:10},{id:'sc6',category_id:'c-over',name:'HUD',slug:'hud',status:'active',sort_order:10}
+  ];
+  async function getCategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORIES;const filter=all?'':'&status=eq.active';const r=await supabaseFetch(`/rest/v1/asset_categories?select=*&order=sort_order.asc,name.asc${filter}`);if(!r.ok)return [];return r.json()}
+  async function getSubcategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORIES;const filter=all?'':'&status=eq.active';const r=await supabaseFetch(`/rest/v1/asset_subcategories?select=*&order=sort_order.asc,name.asc${filter}`);if(!r.ok)return [];return r.json()}
 
   async function getAssets({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
@@ -145,13 +155,16 @@
     return callFunction('asset-access',{assetId,action});
   }
   async function tutorialAccess(tutorialId){
-    if (demoEnabled && !config.supabaseUrl) throw new Error('Adicione o ID do vídeo no painel quando o Supabase estiver configurado.');
+    if (demoEnabled && !config.supabaseUrl) return {demo:true,tutorialId};
     return callFunction('tutorial-access',{tutorialId});
   }
-  async function createSubscription(){
-    if (demoEnabled && !config.supabaseUrl) throw new Error('Mercado Pago não está ativo no modo de demonstração.');
-    return callFunction('create-subscription',{});
-  }
+  async function createSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true};return callFunction('create-subscription',{})}
+  async function createPix(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{})}
+  async function paymentStatus(orderId){if(demoEnabled&&!config.supabaseUrl)return {status:'action_required',paid:false};return callFunction('payment-status',{orderId})}
+  async function cancelSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,status:'canceled',accessUntil:null};return callFunction('cancel-subscription',{})}
+  async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
+  async function vodStart(payload){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:'demo-job-'+Date.now(),status:'queued',progress:0};return callFunction('vod-start',payload)}
+  async function vodStatus(jobId){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:jobId,status:'done',progress:100,message:'Arquivo pronto no modo de demonstração.',download_url:'#',filename:'dehax-demo.mp4'};return callFunction('vod-status',{jobId})}
 
   async function adminFetch(table,{select='*',order='created_at.desc'}={}){
     const r=await supabaseFetch(`/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}`);
@@ -173,5 +186,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createSubscription,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createSubscription,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

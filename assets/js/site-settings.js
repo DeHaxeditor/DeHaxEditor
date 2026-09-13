@@ -1,0 +1,4 @@
+(() => {
+  async function load(){const c=window.DEHAX_CONFIG||{};if(!c.supabaseUrl||!c.supabaseAnonKey)return;try{const r=await fetch(`${c.supabaseUrl}/rest/v1/app_settings?key=in.(brand_red,brand_cyan,brand_background,brand_logo_url)&select=key,value`,{headers:{apikey:c.supabaseAnonKey}});if(!r.ok)return;const s={};for(const row of await r.json())s[row.key]=row.value;if(s.brand_red)document.documentElement.style.setProperty('--red',String(s.brand_red));if(s.brand_cyan)document.documentElement.style.setProperty('--cyan',String(s.brand_cyan));if(s.brand_background)document.documentElement.style.setProperty('--bg',String(s.brand_background));if(s.brand_logo_url)document.querySelectorAll('img[src*="dehax-logo"]').forEach(img=>img.src=String(s.brand_logo_url))}catch{}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
+})();

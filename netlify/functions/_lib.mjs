@@ -10,7 +10,7 @@ export async function authUser(event){const auth=event.headers.authorization||ev
 export async function profile(userId){const {data}=await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`);return data?.[0]||null}
 export async function requireProfile(event,{admin=false}={}){const user=await authUser(event);const p=await profile(user.id);if(!p)throw Object.assign(new Error('Perfil não encontrado.'),{status:403});if(p.is_suspended)throw Object.assign(new Error('Esta conta está temporariamente suspensa.'),{status:403});if(admin&&p.role!=='admin')throw Object.assign(new Error('Acesso restrito ao administrador.'),{status:403});return{user,p}}
 export async function getSetting(key,def=null){try{const{data}=await sb(`/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}&select=value`);return data?.[0]?.value??def}catch{return def}}
-export function activePro(p){return p?.role==='admin'||(p?.plan==='pro'&&['authorized','active','manual','trialing'].includes(String(p.subscription_status||'').toLowerCase()))}
+export function activePro(p){if(p?.role==='admin')return true;if(p?.plan!=='pro')return false;const status=String(p.subscription_status||'').toLowerCase(),expiry=p.access_expires_at?new Date(p.access_expires_at).getTime():null;if(status==='canceled')return Number.isFinite(expiry)&&expiry>Date.now();const ok=['authorized','active','manual','trialing','pix_active'].includes(status);if(!ok)return false;if(expiry&&expiry<=Date.now())return false;return true}
 export function bucket(){return env('R2_BUCKET')}
 export function safeFilename(name='arquivo'){return String(name).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-').slice(0,120)||'arquivo'}
 export function clientHash(event){const ip=(event.headers['x-nf-client-connection-ip']||event.headers['x-forwarded-for']||'unknown').split(',')[0].trim();return crypto.createHash('sha256').update(`${env('DOWNLOAD_HASH_SALT',false)||'dehax'}:${ip}`).digest('hex').slice(0,24)}
@@ -22,8 +22,8 @@ const hmac=(key,data,encoding)=>crypto.createHmac('sha256',key).update(data).dig
 const amzDate=d=>d.toISOString().replace(/[:-]|\.\d{3}/g,'');
 const dateStamp=d=>amzDate(d).slice(0,8);
 const canonicalPath=key=>'/'+String(key).split('/').map(enc).join('/');
-export function presignR2({method='GET',key,expires=120,responseDisposition}){
-  const account=env('R2_ACCOUNT_ID'),access=env('R2_ACCESS_KEY_ID'),secret=env('R2_SECRET_ACCESS_KEY'),b=bucket();
+export function presignR2({method='GET',key,expires=120,responseDisposition,bucketName}){
+  const account=env('R2_ACCOUNT_ID'),access=env('R2_ACCESS_KEY_ID'),secret=env('R2_SECRET_ACCESS_KEY'),b=bucketName||bucket();
   const now=new Date(),stamp=dateStamp(now),date=amzDate(now),region='auto',service='s3',scope=`${stamp}/${region}/${service}/aws4_request`;
   const host=`${b}.${account}.r2.cloudflarestorage.com`,path=canonicalPath(key);
   const params={

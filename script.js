@@ -19,11 +19,22 @@ const DEFAULT_CONTENT={
 const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 function nlTitle(text){return esc(text).replace(/\n/g,'<br>')}
-function youtubeId(url){if(!url)return'';const s=String(url).trim();const m=s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/);return m?m[1]:(/^[A-Za-z0-9_-]{6,}$/.test(s)?s:'')}
+function youtubeId(url){if(!url)return'';const s=String(url).trim();if(/^[A-Za-z0-9_-]{6,}$/.test(s)&&!s.includes('.'))return s;try{const u=new URL(s);const h=u.hostname.replace(/^www\./,'').toLowerCase();if(h==='youtu.be')return u.pathname.split('/').filter(Boolean)[0]||'';if(h.endsWith('youtube.com')){const q=u.searchParams.get('v');if(q)return q;const parts=u.pathname.split('/').filter(Boolean);if(['embed','shorts','live'].includes(parts[0]))return parts[1]||''}}catch{}return''}
 function pathFix(p){if(!p)return'';return p.startsWith('/')?p.slice(1):p}
 function setImage(img,empty,path){if(path){img.src=pathFix(path);img.hidden=false;if(empty)empty.hidden=true}else{img.hidden=true;if(empty)empty.hidden=false}}
 
-async function getContent(){try{const r=await fetch('content/site.json',{cache:'no-store'});if(!r.ok)throw 0;return {...DEFAULT_CONTENT,...await r.json()}}catch(e){return DEFAULT_CONTENT}}
+async function getContent(){
+  let content={...DEFAULT_CONTENT};
+  try{const r=await fetch('content/site.json',{cache:'no-store'});if(r.ok)content={...content,...await r.json()}}catch{}
+  const c=window.DEHAX_CONFIG||{};
+  if(c.supabaseUrl&&c.supabaseAnonKey){
+    try{
+      const r=await fetch(`${c.supabaseUrl}/rest/v1/app_settings?key=eq.public_site_content&select=value`,{headers:{apikey:c.supabaseAnonKey}});
+      if(r.ok){const rows=await r.json(),remote=rows?.[0]?.value;if(remote&&typeof remote==='object'&&!Array.isArray(remote))content={...content,...remote}}
+    }catch{}
+  }
+  return content;
+}
 
 function render(content){
   document.title=`${content.site_name||'DeHax Editor'} — Video Editor`;

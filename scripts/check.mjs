@@ -1,8 +1,25 @@
 import fs from 'node:fs';
-import path from 'node:path';
-const required=['index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html','assets/brand/dehax-logo.png','assets/js/dehax-api.js','assets/js/member.js','assets/js/admin.js','netlify/functions/asset-access.mjs','supabase/schema.sql'];
+const required=[
+  'index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html','checkout/index.html',
+  'privacidade/index.html','termos/index.html','cookies/index.html','assets/brand/dehax-logo.png',
+  'assets/js/dehax-api.js','assets/js/member.js','assets/js/admin.js','assets/js/ui.js','assets/js/tracking.js','assets/js/site-settings.js',
+  'netlify/functions/asset-access.mjs','netlify/functions/admin-upload-url.mjs','netlify/functions/create-subscription.mjs',
+  'netlify/functions/create-pix.mjs','netlify/functions/payment-status.mjs','netlify/functions/cancel-subscription.mjs','netlify/functions/mp-webhook.mjs',
+  'netlify/functions/tutorial-access.mjs','netlify/functions/track-event.mjs','netlify/functions/vod-analyze.mjs',
+  'netlify/functions/vod-start.mjs','netlify/functions/vod-status.mjs','services/vod-worker/app.py',
+  'services/vod-worker/Dockerfile','services/vod-worker/requirements.txt','supabase/schema.sql','docs/R2-CORS.json','docs/R2-MEDIA-CORS.json'
+];
 let bad=false;
 for(const f of required){if(!fs.existsSync(f)){console.error('MISSING',f);bad=true}}
-const htmlFiles=['index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html'];
-for(const f of htmlFiles){const s=fs.readFileSync(f,'utf8');for(const m of s.matchAll(/(?:src|href)="(\/assets\/[^"?#]+)"/g)){const local=m[1].slice(1);if(!fs.existsSync(local)){console.error('BROKEN REF',f,m[1]);bad=true}}}
-if(bad)process.exit(1);console.log('DeHax checks passed.');
+const htmlFiles=['index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html','checkout/index.html','privacidade/index.html','termos/index.html','cookies/index.html'];
+for(const f of htmlFiles){
+  const s=fs.readFileSync(f,'utf8');
+  for(const m of s.matchAll(/(?:src|href)="(\/assets\/[^"?#]+)"/g)){
+    const local=m[1].slice(1);
+    if(!fs.existsSync(local)){console.error('BROKEN REF',f,m[1]);bad=true}
+  }
+}
+const forbidden=[['.env.example','DOWNLOAD_DAILY_LIMIT=500']];
+for(const [f,txt] of forbidden){if(fs.existsSync(f)&&fs.readFileSync(f,'utf8').includes(txt)){console.error('STALE VALUE',f,txt);bad=true}}
+if(bad)process.exit(1);
+console.log('DeHax V2.2 checks passed.');

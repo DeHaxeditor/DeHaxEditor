@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.2.
+# DeHax Editor — Plataforma de Membros V2.2..
 
 A V2.2 mantém a identidade visual aprovada da DeHax e amplia a plataforma para funcionar como um ecossistema completo de aquisição, membros, biblioteca, tutoriais, VOD Downloader, checkout e administração.
 

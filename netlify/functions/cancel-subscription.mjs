@@ -4,7 +4,8 @@ export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
     const {user,p}=await requireProfile(event);
-    if(!p.subscription_id)throw Object.assign(new Error('Não há assinatura recorrente vinculada a esta conta.'),{status:404});
+    const subscriptionStatus=String(p.subscription_status||'').toLowerCase();
+    if(p.plan!=='pro'||!p.subscription_id||!['authorized','active','trialing'].includes(subscriptionStatus))throw Object.assign(new Error('Não há assinatura recorrente PRO ativa vinculada a esta conta.'),{status:404});
     const id=String(p.subscription_id),headers={Authorization:`Bearer ${mpSubscriptionsToken()}`,'Content-Type':'application/json'};
     const currentRes=await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(id)}`,{headers});
     const current=await currentRes.json().catch(()=>({}));if(!currentRes.ok)throw mpError(current,'Não foi possível consultar sua assinatura no Mercado Pago.');

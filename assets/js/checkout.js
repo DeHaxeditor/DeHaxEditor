@@ -286,7 +286,7 @@
     if(confirm){
       $('#successTitle').textContent='PAGAMENTO APROVADO.';
       $('#successMessage').textContent=`${message} Enviamos a confirmação para ${email}. Confirme seu e-mail e depois entre na DeHax.`;
-      action.hidden=false;action.textContent='CONFIRMAR E-MAIL COM CÓDIGO →';action.onclick=()=>location.href=`/confirmar-email/?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/app/')}`;
+      action.hidden=false;action.textContent='CONFIRMAR E-MAIL COM CÓDIGO →';action.onclick=()=>location.href=`/confirmar-email/?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/app/')}&sent=1`;
       return;
     }
     if(created){

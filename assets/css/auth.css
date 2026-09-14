@@ -3,3 +3,6 @@
 
 /* V2.3.0 — confirmação por código */
 .otp-input{text-align:center;font:900 24px/1 monospace;letter-spacing:.22em}.auth-error.ok{border-color:rgba(78,230,168,.25);background:rgba(78,230,168,.06);color:#a9f2d4}
+
+/* V2.3.2 — recuperação de senha por código */
+.forgot-link,.recovery-back{border:0;background:transparent;color:#8d9aaa;font:900 10px/1.2 Inter,Arial,sans-serif;letter-spacing:.04em;cursor:pointer;padding:2px 0;text-align:right}.forgot-link:hover,.recovery-back:hover{color:#fff}.recovery-form{gap:14px}.recovery-step{display:grid;gap:13px}.recovery-step[hidden]{display:none}.recovery-back{text-align:left;margin-top:2px}.recovery-verified{padding:10px 12px;border:1px solid rgba(78,230,168,.25);background:rgba(78,230,168,.06);border-radius:11px;color:#a9f2d4;font-size:11px;font-weight:800}.auth-form .btn:disabled{opacity:.48;cursor:not-allowed}

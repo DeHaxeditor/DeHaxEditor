@@ -73,6 +73,33 @@
     return data;
   }
 
+  async function requestPasswordRecovery(email){
+    if(!config.supabaseUrl||!config.supabaseAnonKey)throw new Error('Supabase não configurado.');
+    const target=String(email||'').trim().toLowerCase();if(!target)throw new Error('Informe seu e-mail.');
+    const r=await fetch(`${config.supabaseUrl}/auth/v1/recover`,{method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({email:target})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.error||'Não foi possível enviar o código de recuperação.');
+    return data;
+  }
+
+  async function verifyPasswordRecoveryOtp(email,otp){
+    if(!config.supabaseUrl||!config.supabaseAnonKey)throw new Error('Supabase não configurado.');
+    const tokenCode=String(otp||'').replace(/\D/g,'');if(!/^\d{6,8}$/.test(tokenCode))throw new Error('Digite o código recebido no e-mail.');
+    const r=await fetch(`${config.supabaseUrl}/auth/v1/verify`,{method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({email:String(email||'').trim().toLowerCase(),token:tokenCode,type:'recovery'})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.error||'Código inválido ou expirado.');
+    if(data.access_token)setSession(data);return data;
+  }
+
+  async function updateRecoveredPassword(password){
+    const value=String(password||'');if(value.length<8)throw new Error('A nova senha precisa ter pelo menos 8 caracteres.');
+    if(!token())throw new Error('Valide o código de recuperação antes de alterar a senha.');
+    const r=await supabaseFetch('/auth/v1/user',{method:'PUT',headers:jsonHeaders,body:JSON.stringify({password:value})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.error||'Não foi possível alterar a senha.');
+    return data;
+  }
+
   async function signOut(){
     if (demoEnabled && token()==='demo-token') {
       setSession(null); localStorage.removeItem(DEMO_KEY); return;
@@ -220,5 +247,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

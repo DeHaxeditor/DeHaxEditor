@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.3.1
+# DeHax Editor — Plataforma de Membros V2.3.2
 
 A V2.3.0 mantém o checkout e os pagamentos validados da V2.2.9 e abre a próxima fase da plataforma: proteção de upgrades, confirmação profissional de e-mail por código e a base completa da IA de áudio.
 
@@ -623,3 +623,13 @@ Não reutilize o token de Assinaturas como `MP_ORDERS_ACCESS_TOKEN`. Em teste, i
 - Upload/transformação de áudio continua em standby.
 
 Para atualizar a partir da V2.3.0, execute `supabase/migration-v2.3.1.sql`.
+
+
+## V2.3.2 — Recuperação por código e correções de conta
+
+- Login ganhou **Esqueci minha senha** com recuperação completa por OTP: e-mail, código, nova senha e retorno ao login.
+- Template dedicado de recuperação em `docs/SUPABASE-RECUPERACAO-SENHA-CODIGO.html`.
+- FREE não recebe tokens de IA; o saldo exibido passa a ser 0 / 0.
+- Cancelamento de recorrência é exibido somente para PRO Mensal recorrente ativo.
+- Reenvio do código de confirmação começa bloqueado por 60 segundos com contagem regressiva visível.
+- Não há migration nova.

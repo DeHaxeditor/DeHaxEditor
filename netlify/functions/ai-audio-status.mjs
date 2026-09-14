@@ -49,7 +49,7 @@ export const handler=async event=>{
     const {voices,subscription}=await loadVoices(settings.voiceLimit);
     return json(200,{
       plan:pro?'pro':'free',admin,enabled:settings.enabled,provider:settings.provider,providerConfigured:!!env('ELEVENLABS_API_KEY',false),providerPlan:subscription,
-      tokens:{allowance:admin?null:settings.tokensPerCycle,used:tokensUsed,remaining:admin?null:Math.max(0,settings.tokensPerCycle-tokensUsed),cycleStart:cycle.start,cycleEnd:cycle.end},
+      tokens:{allowance:admin?null:(pro?settings.tokensPerCycle:0),proAllowance:settings.tokensPerCycle,used:pro?tokensUsed:0,remaining:admin?null:(pro?Math.max(0,settings.tokensPerCycle-tokensUsed):0),cycleStart:cycle.start,cycleEnd:cycle.end},
       costs:{narrationHqPer1000Chars:settings.narrationHqPer1k,narrationFlashPer1000Chars:settings.narrationFlashPer1k,sfxPerSecond:settings.sfxPerSecond},
       limits:{storageDays:settings.storageDays,storageGb:settings.storageGb,maxNarrationChars:settings.maxNarrationChars,maxSfxSeconds:settings.maxSfxSeconds},
       storage:{usedBytes:storageBytes,maxBytes:Math.round(settings.storageGb*1024*1024*1024)},voices,history:history||[]

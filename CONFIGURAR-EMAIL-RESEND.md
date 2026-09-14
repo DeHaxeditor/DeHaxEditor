@@ -1,4 +1,4 @@
-# DeHax V2.3.0 — e-mail profissional + confirmação por código
+# DeHax V2.3.2 — e-mail profissional + confirmação/recuperação por código
 
 A V2.3.0 já contém a página `/confirmar-email/` e a validação do código OTP do Supabase. Para produção, falta somente conectar um SMTP profissional e trocar o template de confirmação.
 
@@ -68,3 +68,10 @@ Faça um teste com um endereço real externo ao time do Supabase:
 4. entrar em `/app/`;
 5. testar `REENVIAR CÓDIGO`.
 
+
+
+### 8. Recuperação de senha por código (V2.3.2)
+
+Em `Authentication > Email Templates > Reset password`, use `docs/SUPABASE-RECUPERACAO-SENHA-CODIGO.html`.
+
+Assunto recomendado: `Código para redefinir sua senha — DeHax Editor`. O template usa `{{ .Token }}` e a tela de login valida o OTP `recovery` antes de liberar a nova senha.

@@ -1,4 +1,4 @@
-DEHAX EDITOR PLATFORM V2.3.1
+DEHAX EDITOR PLATFORM V2.3.2
 
 Base: Netlify + Supabase + Cloudflare R2 + YouTube não listado + Mercado Pago.
 

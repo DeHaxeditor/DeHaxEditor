@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.3.0
+# DeHax Editor — Plataforma de Membros V2.3.1
 
 A V2.3.0 mantém o checkout e os pagamentos validados da V2.2.9 e abre a próxima fase da plataforma: proteção de upgrades, confirmação profissional de e-mail por código e a base completa da IA de áudio.
 
@@ -607,3 +607,19 @@ Não reutilize o token de Assinaturas como `MP_ORDERS_ACCESS_TOKEN`. Em teste, i
 - Em `MP_TEST_MODE=true`, cartão semestral e Pix usam R$ 50,00 exclusivamente no sandbox da Orders API; valores comerciais permanecem inalterados na DeHax e voltam a ser enviados quando o modo de teste for desligado.
 - Sandbox de cartão/Pix usa payload mínimo compatível com os exemplos oficiais.
 - Logs do Mercado Pago agora expandem completamente o array `errors`.
+
+
+## V2.3.1 — IA de áudio e Configurações da conta
+
+- A listagem de vozes agora consulta o tier real da conta ElevenLabs e remove Voice Library indisponível ao plano.
+- Vozes com custom rates/multiplicadores são excluídas da lista para evitar custos imprevisíveis.
+- Preview de voz alterna play/pausa.
+- Custos internos recomendados: 150 tokens/ciclo; HQ/v2-v3 55 tokens por 1.000 caracteres; Flash/Turbo 28; SFX 1 token/segundo.
+- O Admin pode alterar todos esses valores e exibir até 100 vozes.
+- Download dos áudios de IA força download direto sempre que o navegador/R2 permite.
+- Modal de conteúdo PRO passou a usar o seletor mensal/semestral e benefícios configurados no Admin.
+- Rodapé da sidebar possui Configurações e Sair.
+- Configurações inclui nome, troca de senha, assinatura, próxima cobrança/vencimento, tokens/armazenamento de IA e histórico de pagamentos.
+- Upload/transformação de áudio continua em standby.
+
+Para atualizar a partir da V2.3.0, execute `supabase/migration-v2.3.1.sql`.

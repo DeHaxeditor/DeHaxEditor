@@ -153,21 +153,23 @@ export async function cancelRecurringForSemesterUpgrade(userId,p){
 // IA de áudio — quotas internas DeHax. Os tokens abaixo são unidades da plataforma,
 // independentes dos créditos/custos do provedor de IA.
 export async function audioAiSettings(){
-  const keys=['ai_audio_enabled','ai_audio_provider','ai_audio_pro_tokens_per_cycle','ai_audio_token_cycle_days','ai_audio_narration_tokens_per_1000_chars','ai_audio_sfx_tokens_per_second','ai_audio_storage_days','ai_audio_storage_gb_per_user','ai_audio_max_narration_chars','ai_audio_max_sfx_seconds','ai_audio_voice_limit'];
+  const keys=['ai_audio_enabled','ai_audio_provider','ai_audio_pro_tokens_per_cycle','ai_audio_token_cycle_days','ai_audio_narration_tokens_per_1000_chars','ai_audio_narration_hq_tokens_per_1000_chars','ai_audio_narration_flash_tokens_per_1000_chars','ai_audio_sfx_tokens_per_second','ai_audio_storage_days','ai_audio_storage_gb_per_user','ai_audio_max_narration_chars','ai_audio_max_sfx_seconds','ai_audio_voice_limit'];
   const out={};
   for(const k of keys)out[k]=await getSetting(k,null);
+  const legacyNarration=Math.max(1,Number(out.ai_audio_narration_tokens_per_1000_chars??55)||55);
   return {
     enabled:out.ai_audio_enabled===true||String(out.ai_audio_enabled)==='true',
     provider:String(out.ai_audio_provider||'elevenlabs'),
-    tokensPerCycle:Math.max(0,Number(out.ai_audio_pro_tokens_per_cycle??1000)||0),
+    tokensPerCycle:Math.max(0,Number(out.ai_audio_pro_tokens_per_cycle??150)||0),
     cycleDays:Math.max(1,Number(out.ai_audio_token_cycle_days??30)||30),
-    narrationPer1k:Math.max(1,Number(out.ai_audio_narration_tokens_per_1000_chars??50)||50),
-    sfxPerSecond:Math.max(1,Number(out.ai_audio_sfx_tokens_per_second??10)||10),
+    narrationHqPer1k:Math.max(1,Number(out.ai_audio_narration_hq_tokens_per_1000_chars??legacyNarration)||legacyNarration),
+    narrationFlashPer1k:Math.max(1,Number(out.ai_audio_narration_flash_tokens_per_1000_chars??28)||28),
+    sfxPerSecond:Math.max(1,Number(out.ai_audio_sfx_tokens_per_second??1)||1),
     storageDays:Math.max(1,Number(out.ai_audio_storage_days??30)||30),
     storageGb:Math.max(.1,Number(out.ai_audio_storage_gb_per_user??1)||1),
     maxNarrationChars:Math.max(100,Number(out.ai_audio_max_narration_chars??5000)||5000),
     maxSfxSeconds:Math.max(.5,Math.min(30,Number(out.ai_audio_max_sfx_seconds??30)||30)),
-    voiceLimit:Math.max(1,Math.min(50,Number(out.ai_audio_voice_limit??12)||12))
+    voiceLimit:Math.max(1,Math.min(100,Number(out.ai_audio_voice_limit??30)||30))
   };
 }
 export function audioCycleWindow(p,cycleDays=30){
@@ -178,7 +180,10 @@ export function audioCycleWindow(p,cycleDays=30){
   const start=new Date(anchor.getTime()+idx*ms),end=new Date(start.getTime()+ms);
   return {start:start.toISOString(),end:end.toISOString()};
 }
-export function audioTokenCost(kind,text,settings,durationSeconds=5){
-  if(kind==='narration')return Math.max(1,Math.ceil(Math.max(1,String(text||'').length)/1000)*settings.narrationPer1k);
+export function audioTokenCost(kind,text,settings,durationSeconds=5,modelId='eleven_multilingual_v2'){
+  if(kind==='narration'){
+    const per1k=/flash|turbo/i.test(String(modelId||''))?settings.narrationFlashPer1k:settings.narrationHqPer1k;
+    return Math.max(1,Math.ceil((Math.max(1,String(text||'').length)/1000)*per1k));
+  }
   return Math.max(1,Math.ceil(Math.max(.5,Number(durationSeconds)||5)*settings.sfxPerSecond));
 }

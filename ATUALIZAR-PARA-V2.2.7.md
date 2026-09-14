@@ -13,7 +13,7 @@ Esta versão é uma atualização pequena sobre a V2.2.6 e **não exige migratio
 - Foram removidos `reason` e `back_url` do POST da assinatura. Com plano associado, esses campos não são obrigatórios e as configurações do plano são reutilizadas pelo Mercado Pago.
 - Em `MP_TEST_MODE=true`, a Function `create-subscription` registra um diagnóstico seguro do plano e da tentativa (status/valor/moeda/IDs do plano, e-mail mascarado e tamanho do CardToken), **sem imprimir Access Token, Public Key ou CardToken**.
 - Se o Mercado Pago rejeitar a criação, a resposta estruturada do provedor também é registrada nos logs para facilitar a homologação.
-- Assets locais foram versionados como `?v=2.3.0` para evitar cache de JavaScript antigo.
+- Assets locais foram versionados como `?v=2.3.1` para evitar cache de JavaScript antigo.
 
 ## Como atualizar
 

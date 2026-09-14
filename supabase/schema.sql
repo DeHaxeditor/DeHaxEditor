@@ -477,7 +477,7 @@ revoke all on public.ai_audio_generations from anon;
 revoke insert,update,delete on public.ai_audio_generations from authenticated;
 grant select on public.ai_audio_generations to authenticated;
 insert into public.app_settings(key,value) values
- ('ai_audio_enabled','false'::jsonb),('ai_audio_provider','"elevenlabs"'::jsonb),('ai_audio_pro_tokens_per_cycle','1000'::jsonb),('ai_audio_token_cycle_days','30'::jsonb),('ai_audio_narration_tokens_per_1000_chars','50'::jsonb),('ai_audio_sfx_tokens_per_second','10'::jsonb),('ai_audio_storage_days','30'::jsonb),('ai_audio_storage_gb_per_user','1'::jsonb),('ai_audio_max_narration_chars','5000'::jsonb),('ai_audio_max_sfx_seconds','30'::jsonb),('ai_audio_voice_limit','12'::jsonb)
+ ('ai_audio_enabled','false'::jsonb),('ai_audio_provider','"elevenlabs"'::jsonb),('ai_audio_pro_tokens_per_cycle','150'::jsonb),('ai_audio_token_cycle_days','30'::jsonb),('ai_audio_narration_tokens_per_1000_chars','55'::jsonb),('ai_audio_narration_hq_tokens_per_1000_chars','55'::jsonb),('ai_audio_narration_flash_tokens_per_1000_chars','28'::jsonb),('ai_audio_sfx_tokens_per_second','1'::jsonb),('ai_audio_storage_days','30'::jsonb),('ai_audio_storage_gb_per_user','1'::jsonb),('ai_audio_max_narration_chars','5000'::jsonb),('ai_audio_max_sfx_seconds','30'::jsonb),('ai_audio_voice_limit','30'::jsonb)
 on conflict(key) do nothing;
 
 -- V2.3.0 — reserva atômica de tokens da IA

@@ -3,6 +3,19 @@ import { json,parseBody,requireProfile,activePro,errResponse,sb,audioAiSettings,
 
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,Number(n)||a));
 const MODELS=new Set(['eleven_multilingual_v2','eleven_flash_v2_5','eleven_v3']);
+async function validateVoiceAccess(apiKey,voiceId){
+  const [sr,vr]=await Promise.all([
+    fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':apiKey}}),
+    fetch(`https://api.elevenlabs.io/v2/voices?voice_ids=${encodeURIComponent(voiceId)}&page_size=1&include_total_count=false&include_custom_rates=false`,{headers:{'xi-api-key':apiKey}})
+  ]);
+  const sub=sr.ok?await sr.json().catch(()=>({})):{};
+  const data=vr.ok?await vr.json().catch(()=>({})):{};
+  const voice=(data.voices||[])[0];
+  if(!voice)throw Object.assign(new Error('Esta voz não está disponível para geração no plano atual do provedor. Escolha outra voz.'),{status:400,expose:true});
+  const tier=String(sub.tier||'free').toLowerCase(),tiers=Array.isArray(voice.available_for_tiers)?voice.available_for_tiers.map(x=>String(x).toLowerCase()):[];
+  if((tier==='free'&&voice?.sharing?.status==='enabled')||(tiers.length&&!tiers.includes(tier)))throw Object.assign(new Error('Esta voz não está disponível para geração no plano atual do provedor. Escolha outra voz.'),{status:400,expose:true});
+  return {tier,voice};
+}
 async function currentUsage(userId,p,settings){
   const cycle=audioCycleWindow(p,settings.cycleDays);
   const {data:usage}=await sb(`/rest/v1/ai_audio_generations?user_id=eq.${encodeURIComponent(userId)}&status=in.(ready,expired,deleted)&created_at=gte.${encodeURIComponent(cycle.start)}&created_at=lt.${encodeURIComponent(cycle.end)}&select=tokens_spent`);
@@ -15,10 +28,11 @@ async function providerAudio(kind,body,apiKey,settings){
   if(kind==='narration'){
     const voiceId=String(body.voiceId||'').trim();if(!/^[A-Za-z0-9_-]{5,80}$/.test(voiceId))throw Object.assign(new Error('Escolha uma voz antes de gerar.'),{status:400});
     const model=MODELS.has(String(body.modelId||''))?String(body.modelId):'eleven_multilingual_v2';
+    await validateVoiceAccess(apiKey,voiceId);
     const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,{
       method:'POST',headers:{'xi-api-key':apiKey,'Content-Type':'application/json'},body:JSON.stringify({text:body.text,model_id:model,voice_settings:{stability:clamp(body.stability,.05,1),similarity_boost:clamp(body.similarity,.05,1),style:clamp(body.style,0,1),speed:clamp(body.speed,.7,1.2)}})
     });
-    if(!r.ok){const d=await r.json().catch(()=>({}));throw Object.assign(new Error(d?.detail?.message||d?.detail?.status||d?.message||'O provedor não conseguiu gerar a narração.'),{status:502,expose:true})}
+    if(!r.ok){const d=await r.json().catch(()=>({}));let msg=d?.detail?.message||d?.detail?.status||d?.message||'O provedor não conseguiu gerar a narração.';if(/free users cannot use library voices|not available for free users/i.test(String(msg)))msg='Esta voz não está disponível para geração no plano atual do provedor. Escolha outra voz.';throw Object.assign(new Error(msg),{status:502,expose:true})}
     return {buffer:Buffer.from(await r.arrayBuffer()),model,voiceId,duration:null};
   }
   const duration=clamp(body.durationSeconds,.5,settings.maxSfxSeconds),influence=clamp(body.promptInfluence,.05,1);
@@ -40,11 +54,12 @@ export const handler=async event=>{
     const text=String(body.text||'').trim();if(!text)return json(400,{error:kind==='narration'?'Digite o texto da narração.':'Descreva o efeito sonoro que deseja gerar.'});
     if(kind==='narration'&&text.length>settings.maxNarrationChars)return json(400,{error:`A narração aceita até ${settings.maxNarrationChars} caracteres por geração.`});
     const duration=kind==='sfx'?clamp(body.durationSeconds,.5,settings.maxSfxSeconds):0;
-    const cost=audioTokenCost(kind,text,settings,duration||5),usage=await currentUsage(user.id,p,settings),admin=p.role==='admin';
+    const modelId=kind==='narration'?(MODELS.has(String(body.modelId||''))?String(body.modelId):'eleven_multilingual_v2'):'eleven_text_to_sound_v2';
+    const cost=audioTokenCost(kind,text,settings,duration||5,modelId),usage=await currentUsage(user.id,p,settings),admin=p.role==='admin';
     const maxBytes=Math.round(settings.storageGb*1024*1024*1024);if(usage.bytes>=maxBytes)return json(413,{error:'Seu espaço de IA está cheio. Aguarde a expiração dos arquivos ou baixe o que precisa antes de gerar novamente.'});
     generationId=crypto.randomUUID();const expiresAt=new Date(Date.now()+settings.storageDays*86400000).toISOString();
     try{
-      await sb('/rest/v1/rpc/reserve_ai_audio_generation',{method:'POST',body:{p_id:generationId,p_user_id:user.id,p_kind:kind,p_provider:settings.provider,p_model_id:kind==='sfx'?'eleven_text_to_sound_v2':String(body.modelId||'eleven_multilingual_v2'),p_voice_id:kind==='narration'?String(body.voiceId||''):null,p_prompt_preview:text.slice(0,240),p_tokens:cost,p_expires_at:expiresAt,p_cycle_start:usage.cycle.start,p_cycle_end:usage.cycle.end,p_token_limit:admin?null:settings.tokensPerCycle}});
+      await sb('/rest/v1/rpc/reserve_ai_audio_generation',{method:'POST',body:{p_id:generationId,p_user_id:user.id,p_kind:kind,p_provider:settings.provider,p_model_id:modelId,p_voice_id:kind==='narration'?String(body.voiceId||''):null,p_prompt_preview:text.slice(0,240),p_tokens:cost,p_expires_at:expiresAt,p_cycle_start:usage.cycle.start,p_cycle_end:usage.cycle.end,p_token_limit:admin?null:settings.tokensPerCycle}});
     }catch(reserveError){
       const m=String(reserveError?.message||'');const hit=m.match(/AI_TOKEN_LIMIT\|(\d+)\|(\d+)/);
       if(hit)return json(402,{error:`Tokens insuficientes. Esta geração custa ${hit[1]} tokens e você possui ${hit[2]} disponíveis.`,tokensRequired:Number(hit[1]),tokensRemaining:Number(hit[2])});

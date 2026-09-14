@@ -9,6 +9,29 @@ export async function sb(path,{method='GET',body,headers={}}={}){const r=await f
 export async function authUser(event){const auth=event.headers.authorization||event.headers.Authorization||'';const token=auth.replace(/^Bearer\s+/i,'');if(!token)throw Object.assign(new Error('Faça login para continuar.'),{status:401});const r=await fetch(`${supabaseUrl()}/auth/v1/user`,{headers:{apikey:serviceKey(),Authorization:`Bearer ${token}`}});if(!r.ok)throw Object.assign(new Error('Sessão inválida ou expirada.'),{status:401});return r.json()}
 export async function profile(userId){const {data}=await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`);return data?.[0]||null}
 export async function requireProfile(event,{admin=false}={}){const user=await authUser(event);const p=await profile(user.id);if(!p)throw Object.assign(new Error('Perfil não encontrado.'),{status:403});if(p.is_suspended)throw Object.assign(new Error('Esta conta está temporariamente suspensa.'),{status:403});if(admin&&p.role!=='admin')throw Object.assign(new Error('Acesso restrito ao administrador.'),{status:403});return{user,p}}
+
+export async function authAdminUser(userId){
+  const r=await fetch(`${supabaseUrl()}/auth/v1/admin/users/${encodeURIComponent(userId)}`,{headers:{apikey:serviceKey(),Authorization:`Bearer ${serviceKey()}`}});
+  if(!r.ok)throw Object.assign(new Error('Usuário de checkout não encontrado.'),{status:404});
+  return r.json();
+}
+export async function requirePaymentProfile(event,body={}){
+  const auth=event.headers.authorization||event.headers.Authorization||'';
+  const bearer=auth.replace(/^Bearer\s+/i,'').trim();
+  if(bearer)return requireProfile(event);
+  const raw=String(body.checkoutToken||'').trim();
+  if(!raw)throw Object.assign(new Error('Crie sua conta ou entre antes de continuar o pagamento.'),{status:401});
+  const tokenHash=crypto.createHash('sha256').update(raw).digest('hex');
+  const now=new Date().toISOString();
+  const {data:sessions}=await sb(`/rest/v1/checkout_sessions?token_hash=eq.${encodeURIComponent(tokenHash)}&used_at=is.null&expires_at=gt.${encodeURIComponent(now)}&select=*&limit=1`);
+  const session=sessions?.[0];
+  if(!session)throw Object.assign(new Error('Sua sessão de checkout expirou. Entre ou crie a conta novamente.'),{status:401});
+  const p=await profile(session.user_id);
+  if(!p)throw Object.assign(new Error('Perfil do checkout não encontrado.'),{status:403});
+  if(p.is_suspended)throw Object.assign(new Error('Esta conta está temporariamente suspensa.'),{status:403});
+  const u=await authAdminUser(session.user_id);
+  return {user:{id:u.id,email:u.email,user_metadata:u.user_metadata||{}},p,checkoutSession:session};
+}
 export async function getSetting(key,def=null){try{const{data}=await sb(`/rest/v1/app_settings?key=eq.${encodeURIComponent(key)}&select=value`);return data?.[0]?.value??def}catch{return def}}
 export function activePro(p){if(p?.role==='admin')return true;if(p?.plan!=='pro')return false;const status=String(p.subscription_status||'').toLowerCase(),expiry=p.access_expires_at?new Date(p.access_expires_at).getTime():null;if(status==='canceled')return Number.isFinite(expiry)&&expiry>Date.now();const ok=['authorized','active','manual','trialing','pix_active','semester_active'].includes(status);if(!ok)return false;if(expiry&&expiry<=Date.now())return false;return true}
 export function bucket(){return env('R2_BUCKET')}

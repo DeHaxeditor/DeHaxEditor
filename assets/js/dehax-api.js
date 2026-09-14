@@ -158,10 +158,11 @@
     if (demoEnabled && !config.supabaseUrl) return {demo:true,tutorialId};
     return callFunction('tutorial-access',{tutorialId});
   }
-  async function createSubscription(card){if(demoEnabled&&!config.supabaseUrl)return {demo:true,authorized:true,status:'authorized',subscriptionId:'demo-sub'};return callFunction('create-subscription',{card})}
-  async function createCardPayment(card,planCode='semester'){if(demoEnabled&&!config.supabaseUrl)return {demo:true,paid:true,status:'approved',paymentId:'demo-card',accessExpiresAt:new Date(Date.now()+183*86400000).toISOString()};return callFunction('create-card-payment',{card,planCode})}
-  async function createPix(planCode='semester'){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{planCode})}
-  async function paymentStatus(orderId){if(demoEnabled&&!config.supabaseUrl)return {status:'action_required',paid:false};return callFunction('payment-status',{orderId})}
+  async function createCheckoutSession(userId,email){if(demoEnabled&&!config.supabaseUrl)return {demo:true,checkoutToken:'demo-checkout',expiresAt:new Date(Date.now()+1800000).toISOString(),user:{id:userId||'demo-user',email,displayName:'Editor Demo'},emailConfirmed:false};return callFunction('checkout-session',{userId,email})}
+  async function createSubscription(card,checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,authorized:true,status:'authorized',subscriptionId:'demo-sub'};return callFunction('create-subscription',{card,checkoutToken})}
+  async function createCardPayment(card,planCode='semester',checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,paid:true,status:'approved',paymentId:'demo-card',accessExpiresAt:new Date(Date.now()+183*86400000).toISOString()};return callFunction('create-card-payment',{card,planCode,checkoutToken})}
+  async function createPix(planCode='semester',checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{planCode,checkoutToken})}
+  async function paymentStatus(orderId,checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {status:'action_required',paid:false};return callFunction('payment-status',{orderId,checkoutToken})}
   async function cancelSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,status:'canceled',accessUntil:null};return callFunction('cancel-subscription',{})}
   async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
   async function vodStart(payload){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:'demo-job-'+Date.now(),status:'queued',progress:0};return callFunction('vod-start',payload)}
@@ -187,5 +188,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createCheckoutSession,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

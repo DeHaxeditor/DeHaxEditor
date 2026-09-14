@@ -7,7 +7,7 @@ const required=[
   'netlify/functions/create-card-payment.mjs','netlify/functions/create-pix.mjs','netlify/functions/payment-status.mjs','netlify/functions/cancel-subscription.mjs','netlify/functions/mp-webhook.mjs',
   'netlify/functions/tutorial-access.mjs','netlify/functions/track-event.mjs','netlify/functions/vod-analyze.mjs',
   'netlify/functions/vod-start.mjs','netlify/functions/vod-status.mjs','services/vod-worker/app.py',
-  'services/vod-worker/Dockerfile','services/vod-worker/requirements.txt','supabase/schema.sql','supabase/migration-v2.2.1.sql','docs/R2-CORS.json','docs/R2-MEDIA-CORS.json'
+  'services/vod-worker/Dockerfile','services/vod-worker/requirements.txt','supabase/schema.sql','supabase/migration-v2.2.1.sql','supabase/migration-v2.2.2.sql','netlify/functions/checkout-session.mjs','docs/R2-CORS.json','docs/R2-MEDIA-CORS.json'
 ];
 let bad=false;
 for(const f of required){if(!fs.existsSync(f)){console.error('MISSING',f);bad=true}}
@@ -22,4 +22,4 @@ for(const f of htmlFiles){
 const forbidden=[['.env.example','DOWNLOAD_DAILY_LIMIT=500']];
 for(const [f,txt] of forbidden){if(fs.existsSync(f)&&fs.readFileSync(f,'utf8').includes(txt)){console.error('STALE VALUE',f,txt);bad=true}}
 if(bad)process.exit(1);
-console.log('DeHax V2.2.1 checks passed.');
+console.log('DeHax V2.2.2 checks passed.');

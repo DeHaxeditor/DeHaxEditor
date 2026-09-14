@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requireProfile,errResponse,getSetting,sb,mpSubscriptionsToken,mpError,grantFixedProForOrder,mpCardPayerEmail } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpSubscriptionsToken,mpError,grantFixedProForOrder,mpCardPayerEmail } from './_lib.mjs';
 
 const money=v=>Math.max(.01,Number(String(v??'').replace(',','.').replace(/[^0-9.]/g,''))||0);
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
-    const {user,p}=await requireProfile(event);const recurringActive=!!p.subscription_id&&['authorized','active','trialing'].includes(String(p.subscription_status||'').toLowerCase());if(recurringActive)return json(409,{error:'Você já possui uma assinatura mensal recorrente ativa. Cancele a renovação mensal antes de contratar o semestral.'});const body=parseBody(event),card=body.card||{};
+    const body=parseBody(event);const {user,p}=await requirePaymentProfile(event,body);const recurringActive=!!p.subscription_id&&['authorized','active','trialing'].includes(String(p.subscription_status||'').toLowerCase());if(recurringActive)return json(409,{error:'Você já possui uma assinatura mensal recorrente ativa. Cancele a renovação mensal antes de contratar o semestral.'});const card=body.card||{};
     if(body.planCode!=='semester')return json(400,{error:'Plano de pagamento avulso inválido.'});
     if(!card.token)return json(400,{error:'Token do cartão ausente. Preencha os dados do cartão novamente.'});
     if(!card.payment_method_id)return json(400,{error:'Meio de pagamento do cartão ausente.'});

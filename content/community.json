@@ -7,5 +7,25 @@
   "whatsapp_url": "",
   "pro_monthly_price": "19,90",
   "pro_semester_monthly_equiv": "9,90",
-  "pro_semester_total": "59,40"
+  "pro_semester_total": "59,40",
+  "free_plan_benefits": [
+    "Conta na plataforma",
+    "Assets e aulas gratuitas",
+    "Visualização da biblioteca PRO"
+  ],
+  "monthly_plan_benefits": [
+    "Toda a biblioteca de assets",
+    "Todos os tutoriais PRO",
+    "Novos conteúdos adicionados",
+    "Preview + download direto",
+    "Renovação mensal flexível"
+  ],
+  "semester_plan_benefits": [
+    "Toda a biblioteca de assets",
+    "Todos os tutoriais PRO",
+    "Novos conteúdos adicionados",
+    "Preview + download direto",
+    "6 meses de acesso com maior economia"
+  ],
+  "pix_access_days": 30
 }

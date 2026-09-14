@@ -1,4 +1,4 @@
-# DeHax V2.2.1 — Checklist de configuração
+# DeHax V2.2.2 — Checklist de configuração
 
 Use este arquivo amanhã como ordem de trabalho. O código já está preparado; aqui entram apenas contas, chaves, conteúdo e testes reais.
 
@@ -63,15 +63,19 @@ Em **Comunidade & marca**:
 Em **Categorias**:
 
 - revisar categorias;
-- criar todas as subcategorias desejadas.
+- criar todas as subcategorias desejadas;
+- testar pausar/reativar uma categoria inteira;
+- testar exclusão em lote e upload em massa;
+- editar as vantagens FREE, Mensal e Semestral.
 
 Depois cadastrar assets e tutoriais reais.
 
 ## 4. Mercado Pago — checkout corrigido
 
-Antes do deploy da V2.2.1:
+Antes do deploy da V2.2.2:
 
-- executar `supabase/migration-v2.2.1.sql`;
+- se ainda não fez: executar `supabase/migration-v2.2.1.sql`;
+- depois executar `supabase/migration-v2.2.2.sql`;
 - manter o plano mensal `DeHax PRO` no Mercado Pago em R$ 19,90/mês;
 - pegar a **Public Key** da aplicação de cartão/assinaturas;
 - usar token de cartão/assinaturas separado do token Orders/Pix;
@@ -101,6 +105,7 @@ Testar:
 - mensal R$ 19,90/mês: Card Payment Brick dentro da DeHax → assinatura recorrente autorizada → PRO;
 - cancelamento mensal: para novas cobranças, preservando o acesso até o fim do período já pago;
 - semestral cartão: R$ 59,40 em 1x → 6 meses de PRO;
+- mensal Pix: R$ 19,90 → Order/QR → período configurado (30 dias por padrão), com renovação antecipada sem perda de dias;
 - semestral Pix: R$ 59,40 → Order/QR → 6 meses de PRO após confirmação;
 - confirmar que número completo do cartão, validade e CVV não aparecem no Supabase/logs da DeHax.
 

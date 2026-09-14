@@ -40,16 +40,30 @@
     </section>
 
     <section class="checkout-card">
-      <div id="checkoutLoading">Carregando sua conta...</div>
+      <div id="checkoutLoading">Preparando checkout...</div>
       <div id="checkoutContent" hidden>
+        <div class="checkout-step"><span>00</span><b>SEUS DADOS</b></div>
+        <div class="checkout-account" id="checkoutAccountExisting" hidden>
+          <div class="account-avatar">✓</div><div><b id="checkoutAccountName">Membro DeHax</b><small id="checkoutAccountEmail">—</small></div><a href="/entrar/?next=%2Fcheckout%2F">TROCAR CONTA</a>
+        </div>
+        <form class="checkout-signup" id="checkoutSignupForm" hidden>
+          <div class="two-checkout-fields"><label class="field">Nome<input class="input" name="name" autocomplete="name" required placeholder="Seu nome"></label><label class="field">E-mail<input class="input" type="email" name="email" autocomplete="email" required placeholder="voce@email.com"></label></div>
+          <label class="field">Crie uma senha<input class="input" type="password" name="password" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
+          <div class="signup-confirm-note">Você poderá concluir o pagamento agora. Enviaremos um e-mail de confirmação; <strong>é necessário confirmar o e-mail antes do primeiro acesso à área de membros.</strong></div>
+          <button class="btn primary" type="submit">CRIAR CONTA E CONTINUAR →</button>
+          <p class="existing-login">Já possui conta? <a id="checkoutLoginLink" href="/entrar/?next=%2Fcheckout%2F">Entrar para preencher seus dados automaticamente</a>.</p>
+        </form>
+        <div class="email-confirmation-notice" id="emailConfirmationNotice" hidden><b>CONFIRME SEU E-MAIL</b><span>Sua conta foi criada e você pode finalizar a compra. Para entrar no painel depois, confirme o e-mail que enviamos para <strong id="confirmationEmail">seu endereço</strong>.</span></div>
+
+        <div id="purchaseArea" hidden>
         <div class="checkout-step"><span>01</span><b>ESCOLHA O PLANO</b></div>
         <div class="plan-choice-grid">
-          <button class="plan-choice active" type="button" data-plan="monthly" id="planMonthly">
+          <button class="plan-choice" type="button" data-plan="monthly" id="planMonthly">
             <span class="plan-choice-tag">MENSAL</span>
             <strong>R$ <b id="monthlyPrice">19,90</b><small>/mês</small></strong>
             <p>Cartão recorrente ou Pix avulso por 30 dias. No Pix, renove antes sem perder dias.</p>
           </button>
-          <button class="plan-choice best" type="button" data-plan="semester" id="planSemester">
+          <button class="plan-choice best active" type="button" data-plan="semester" id="planSemester">
             <span class="save-badge" id="semesterDiscount">ECONOMIZE R$ 60,00</span>
             <span class="plan-choice-tag">6 MESES</span>
             <strong>R$ <b id="semesterMonthly">9,90</b><small>/mês equivalente</small></strong>
@@ -83,6 +97,7 @@
         </div>
 
         <div id="checkoutStatus" class="checkout-status"></div>
+        </div>
       </div>
     </section>
   </main>

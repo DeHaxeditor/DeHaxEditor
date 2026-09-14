@@ -1,12 +1,12 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requireProfile,activePro,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,activePro,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail } from './_lib.mjs';
 
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
-    const {user,p}=await requireProfile(event);
+    const body=parseBody(event);const {user,p}=await requirePaymentProfile(event,body);
     if(activePro(p))return json(409,{error:p.access_expires_at?'Seu PRO já está ativo até o período informado na sua conta. Aguarde o término para iniciar o plano mensal.':'Sua assinatura recorrente PRO já está ativa.'});
-    const body=parseBody(event),card=body.card||{};
+    const card=body.card||{};
     const token=mpSubscriptionsToken(),plan=env('MP_PLAN_ID');
     const planRes=await fetch(`https://api.mercadopago.com/preapproval_plan/${encodeURIComponent(plan)}`,{headers:{Authorization:`Bearer ${token}`}});
     const planData=await planRes.json().catch(()=>({}));if(!planRes.ok)throw mpError(planData,'Não foi possível validar o plano mensal no Mercado Pago.');

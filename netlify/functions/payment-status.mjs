@@ -1,9 +1,9 @@
-import { json,parseBody,requireProfile,errResponse,sb,mpOrdersToken,mpSubscriptionsToken,mpError,grantFixedProForOrder } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,sb,mpOrdersToken,mpSubscriptionsToken,mpError,grantFixedProForOrder } from './_lib.mjs';
 
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
-    const {user}=await requireProfile(event);const {orderId}=parseBody(event);
+    const body=parseBody(event);const {user}=await requirePaymentProfile(event,body);const {orderId}=body;
     if(!orderId)return json(400,{error:'Pedido ausente.'});
     const {data:orders}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(orderId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`);
     const local=orders?.[0];if(!local)throw Object.assign(new Error('Pedido não encontrado para esta conta.'),{status:404});

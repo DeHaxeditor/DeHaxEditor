@@ -1,6 +1,20 @@
-# DeHax Editor — Plataforma de Membros V2.2.1
+# DeHax Editor — Plataforma de Membros V2.2.2
 
-A V2.2.1 mantém a identidade visual aprovada da DeHax e amplia a plataforma para funcionar como um ecossistema completo de aquisição, membros, biblioteca, tutoriais, VOD Downloader, checkout e administração.
+A V2.2.2 mantém a identidade visual aprovada da DeHax e acrescenta checkout para novos usuários, gestão de categorias em lote, upload em massa e planos/benefícios mais fáceis de administrar.
+
+## Destaques da V2.2.2
+
+- categorias e subcategorias podem ser pausadas/reativadas inteiras; assets vinculados somem da biblioteca e o backend bloqueia acesso enquanto estiverem pausadas;
+- exclusão de categoria/subcategoria pode remover todos os assets vinculados em uma única ação;
+- upload em massa cria um asset individual por arquivo usando o nome do arquivo como título;
+- vantagens dos planos FREE, Mensal e Semestral são editáveis pelo Admin;
+- landing PRO usa seletor deslizante Semestral/Mensal, começando no Semestral (R$ 9,90/mês equivalente; R$ 59,40 integral por 6 meses);
+- CTA principal do plano é `QUERO SER PRO` e leva diretamente ao checkout já com o plano selecionado;
+- checkout permite criar conta sem sair da compra; o Supabase envia confirmação de e-mail e a compra pode ser concluída antes da confirmação, mas o primeiro login exige a confirmação;
+- usuários já logados têm nome/e-mail preenchidos automaticamente no checkout e não veem campo de senha;
+- miniaturas de vídeo/imagem continuam visíveis na biblioteca, e previews/downloads respeitam categorias pausadas.
+
+Para quem já está na V2.2.1, execute somente `supabase/migration-v2.2.2.sql` e consulte `ATUALIZAR-PARA-V2.2.2.md`.
 
 ## O que mudou nesta versão
 
@@ -16,7 +30,7 @@ A V2.2.1 mantém a identidade visual aprovada da DeHax e amplia a plataforma par
 - **Botões unificados** com o efeito vermelho/ciano usado na página principal.
 - **Checkout `/checkout/` dentro da DeHax** usando o Card Payment Brick oficial do Mercado Pago. O cartão é tokenizado pelo SDK do Mercado Pago; PAN, validade e CVV não são enviados ao backend nem armazenados pela DeHax.
 - **Dois planos PRO**: mensal recorrente por R$ 19,90/mês e semestral pré-pago por R$ 59,40 (equivalente a R$ 9,90/mês), sem parcelamento e sem renovação automática.
-- **Pix semestral** via Mercado Pago Orders API, com QR/Copia e Cola exibidos dentro da DeHax.
+- **Pix mensal e semestral** via Mercado Pago Orders API, com QR/Copia e Cola exibidos dentro da DeHax; no mensal a renovação é manual e antecipar o pagamento não faz o membro perder dias.
 - **Cancelamento mensal** interrompe renovações futuras sem multa e preserva o acesso até o fim do ciclo já pago.
 - **Miniaturas visíveis na biblioteca** para assets de vídeo e imagem, tanto em cards quanto na listagem.
 - **Tutorial com liberação programada**: cada tutorial pode ter `0, 7, 14...` dias de espera a partir da primeira ativação PRO. O exemplo inicial usa 7 dias e é apresentado como bônus com liberação programada; isso não altera direitos legais de arrependimento/cancelamento.
@@ -36,7 +50,7 @@ A V2.2.1 mantém a identidade visual aprovada da DeHax e amplia a plataforma par
 | Tutoriais | YouTube não listado |
 | Cartão mensal recorrente | Mercado Pago Card Payment Brick + Assinaturas |
 | Cartão semestral | Mercado Pago Card Payment Brick + pagamento único em 1x |
-| Pix semestral | Mercado Pago Orders API + QR exibido localmente |
+| Pix mensal e semestral | Mercado Pago Orders API + QR exibido localmente |
 | Backend do site | Netlify Functions |
 | VOD Downloader | Serviço Docker separado com FastAPI + yt-dlp + ffmpeg |
 | CRM inicial | Supabase + eventos próprios + Meta Pixel opcional |
@@ -49,7 +63,7 @@ A versão web **não recebe nem envia cookies do navegador do usuário**. Recurs
 
 ---
 
-# 1. Testar a V2.2.1 localmente
+# 1. Testar a V2.2.2 localmente
 
 No Windows, extraia o ZIP e dê dois cliques em:
 
@@ -72,7 +86,7 @@ Na demo, pagamentos, uploads, downloads reais e o processamento VOD dependente d
 # 2. Supabase
 
 1. Se for uma instalação nova, crie o projeto, abra o **SQL Editor** e execute `supabase/schema.sql` inteiro.
-2. Se você **já está na V2.2 com Supabase funcionando**, não repita o schema: execute **somente** `supabase/migration-v2.2.1.sql` antes de testar o novo checkout.
+2. Se você já está na V2.2.1 com Supabase funcionando, não repita o schema: execute **somente** `supabase/migration-v2.2.2.sql`. Se veio da V2.2, execute primeiro `migration-v2.2.1.sql` e depois `migration-v2.2.2.sql`.
 3. Em Authentication, mantenha login por e-mail/senha configurado.
 4. Cadastre sua conta em `/entrar/`.
 5. Promova sua conta a admin:
@@ -148,11 +162,11 @@ R2_MEDIA_PUBLIC_URL=
 
 ---
 
-# 4. Mercado Pago — V2.2.1
+# 4. Mercado Pago — V2.2.2
 
 ## Antes de testar
 
-No projeto Supabase já existente, execute `supabase/migration-v2.2.1.sql`. A migração adiciona `plan_code`/`payment_method` em `payment_orders` e os preços do mensal/semestral nas configurações.
+No projeto Supabase existente, mantenha a migration V2.2.1 aplicada e execute também `supabase/migration-v2.2.2.sql`. A nova migration cria a sessão temporária de checkout para contas recém-cadastradas e as listas editáveis de vantagens dos planos.
 
 ## Variáveis Netlify
 
@@ -190,6 +204,10 @@ Antes de criar a assinatura, o backend também confere se o preço mensal exibid
 
 A cobrança é recorrente mensal. O botão **Cancelar recorrência** cancela futuras renovações no Mercado Pago e mantém o PRO até o fim do ciclo já pago, usando `next_payment_date` (com fallback defensivo pelo ciclo mensal).
 
+## Mensal por Pix — R$ 19,90 avulso
+
+O mesmo plano mensal pode ser pago por Pix sem recorrência. Por padrão a confirmação concede 30 dias de PRO (`pix_access_days`). O membro pode renovar antes do vencimento: a função de concessão usa a expiração atual como base quando ela ainda está no futuro, portanto os novos dias começam somente depois do período já pago.
+
 ## Semestral — R$ 59,40 à vista
 
 O plano semestral equivale a **R$ 9,90/mês** e é uma compra única de seis meses, sem renovação automática. Comparado a seis mensalidades de R$ 19,90 (R$ 119,40), a economia exibida é de R$ 60,00, aproximadamente 50%.
@@ -198,7 +216,7 @@ O plano semestral equivale a **R$ 9,90/mês** e é uma compra única de seis mes
 - **Pix:** Orders API, QR Code e Pix Copia e Cola dentro da DeHax.
 - Pagamento aprovado concede 6 meses-calendário de PRO. O código possui proteção de idempotência para não somar outros 6 meses quando o mesmo webhook/status for recebido novamente.
 
-O Pix fica disponível no semestral. O mensal exige cartão porque é uma assinatura recorrente automática.
+O Pix também fica disponível no mensal como pagamento avulso pelo período configurado (30 dias por padrão). A recorrência automática mensal é exclusiva do cartão. Se o membro renovar o Pix antes do vencimento, o novo período é somado depois da data atual de expiração, sem perda de dias.
 
 ## Webhooks
 

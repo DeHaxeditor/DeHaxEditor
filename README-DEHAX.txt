@@ -1,4 +1,4 @@
-DEHAX EDITOR PLATFORM V2.2.1
+DEHAX EDITOR PLATFORM V2.2.2
 
 Base: Netlify + Supabase + Cloudflare R2 + YouTube não listado + Mercado Pago.
 
@@ -15,3 +15,6 @@ ATUALIZAÇÃO IMPORTANTE
 Veja README-DEHAX-V2.md e CONFIGURAR-AMANHA.md para configuração completa.
 
 PIX MENSAL: disponível como pagamento avulso. Renovação antecipada soma o novo período ao final do acesso atual, sem perda de dias. Aviso de vencimento configurável no Admin.
+
+V2.2.2: depois da migration V2.2.1, execute supabase/migration-v2.2.2.sql.
+Veja ATUALIZAR-PARA-V2.2.2.md.

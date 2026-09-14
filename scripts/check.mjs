@@ -22,4 +22,4 @@ for(const f of htmlFiles){
 const forbidden=[['.env.example','DOWNLOAD_DAILY_LIMIT=500']];
 for(const [f,txt] of forbidden){if(fs.existsSync(f)&&fs.readFileSync(f,'utf8').includes(txt)){console.error('STALE VALUE',f,txt);bad=true}}
 if(bad)process.exit(1);
-console.log('DeHax V2.2.3 checks passed.');
+console.log('DeHax V2.2.5 checks passed.');

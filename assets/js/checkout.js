@@ -4,7 +4,7 @@
   const GUEST_KEY='dehax_checkout_guest_v2';
   let profile=null,currentUser=null,checkoutToken='',checkoutIdentity=null,guestCreated=false,needsEmailConfirmation=false;
   let settings={},selectedPlan=new URLSearchParams(location.search).get('plan')==='monthly'?'monthly':'semester',paymentMethod='card';
-  let brickController=null,bricksBuilder=null,brickEmail='',orderId='',orderPlan='',poll=null;
+  let brickController=null,bricksBuilder=null,brickEmail='',brickKey='',brickMountPromise=null,brickMountSeq=0,orderId='',orderPlan='',poll=null;
   let probeTimer=null,probeSeq=0,probeResolvedEmail='',probeExists=false,probeEmailConfirmed=true;
 
   const toast=(msg,type='ok')=>{const d=document.createElement('div');d.className=`toast ${type}`;d.textContent=msg;$('#toasts').appendChild(d);setTimeout(()=>d.remove(),4300)};
@@ -73,7 +73,7 @@
       setIdentityInputs({name:checkoutIdentity.displayName||$('#checkoutName').value,email:checkoutIdentity.email||'',locked:true});
       $('#checkoutEmail').readOnly=true;$('#existingAccountNotice').hidden=true;$('#newAccountNotice').hidden=false;$('#newAccountFields').hidden=true;
       $('#newAccountNotice').innerHTML=guestCreated
-        ? 'Sua conta foi criada para esta compra. <strong>Confirme o e-mail recebido antes do primeiro login.</strong>'
+        ? (needsEmailConfirmation?'Sua conta foi criada para esta compra. <strong>Confirme o e-mail recebido antes do primeiro login.</strong>':'Sua conta foi criada para esta compra. <strong>O e-mail está liberado para testes; depois do pagamento, faça login normalmente.</strong>')
         : 'A compra será aplicada à conta já cadastrada. Depois do pagamento, faça login para acessar o PRO.';
       $('#emailCheckState').className='identity-check-line ok';$('#emailCheckState').textContent=guestCreated?'Conta preparada para o pagamento.':'Conta existente vinculada a este checkout.';
       return;
@@ -91,8 +91,28 @@
     renderPlan();
   }
   async function unmountBrick(){
-    if(brickController){try{await brickController.unmount()}catch{}brickController=null}
-    brickEmail='';$('#cardPaymentBrick_container').innerHTML='';
+    brickMountSeq++;
+    const mounted=brickController;
+    brickController=null;brickEmail='';brickKey='';brickMountPromise=null;
+    if(mounted){try{await mounted.unmount()}catch{}}
+    $('#cardPaymentBrick_container').innerHTML='';
+    $('#cardBrickError').hidden=true;$('#cardBrickError').textContent='';
+  }
+
+  function brickErrorDetail(error){
+    const parts=[];
+    const push=v=>{if(v===undefined||v===null)return;if(typeof v==='string'||typeof v==='number')parts.push(String(v));};
+    push(error?.type);push(error?.message);push(error?.cause);push(error?.error?.type);push(error?.error?.message);push(error?.error?.cause);
+    if(Array.isArray(error?.cause))for(const item of error.cause){push(item?.code);push(item?.description);push(item?.message)}
+    return [...new Set(parts.filter(Boolean))].join(' · ');
+  }
+
+  function showBrickError(error){
+    const detail=brickErrorDetail(error);
+    console.error('Mercado Pago Brick',error,detail||'sem detalhe');
+    if(!detail)return;
+    const el=$('#cardBrickError');
+    el.hidden=false;el.textContent=`Mercado Pago: ${detail}`;
   }
   function renderPlan(){
     $$('[data-plan]').forEach(b=>b.classList.toggle('active',b.dataset.plan===selectedPlan));
@@ -153,23 +173,45 @@
   }
 
   async function ensureCardBrick(){
-    if(paymentMethod!=='card')return;
+    if(paymentMethod!=='card')return null;
     const email=payerEmail();
     const readyIdentity=!!currentUser||!!checkoutToken||(validEmail(email)&&probeResolvedEmail===email);
-    if(!validEmail(email)||!readyIdentity){await unmountBrick();$('#cardWaiting').hidden=false;$('#cardBrickLoading').hidden=true;return}
-    if(!DehaxAPI.config.mpPublicKey){$('#cardWaiting').hidden=false;$('#cardWaiting').textContent='MP_PUBLIC_KEY ainda não foi configurada no Netlify.';return}
-    if(brickController&&brickEmail===email)return;
-    await unmountBrick();$('#cardWaiting').hidden=true;$('#cardBrickLoading').hidden=false;
-    try{
-      if(!window.MercadoPago)throw new Error('SDK do Mercado Pago não carregou. Atualize a página e tente novamente.');
-      if(!bricksBuilder){const mp=new MercadoPago(DehaxAPI.config.mpPublicKey,{locale:'pt-BR'});bricksBuilder=mp.bricks()}
-      const amount=selectedAmount();brickEmail=email;
-      brickController=await bricksBuilder.create('cardPayment','cardPaymentBrick_container',{
-        initialization:{amount,payer:{email}},
-        customization:{paymentMethods:{types:{excluded:['debit_card','prepaid_card']},minInstallments:1,maxInstallments:1},visual:{hidePaymentButton:true,style:{theme:'dark',customVariables:{baseColor:'#ff294d',buttonTextColor:'#ffffff',formBackgroundColor:'#080d13',inputBackgroundColor:'#0b1118',textPrimaryColor:'#f4f7fb',textSecondaryColor:'#7f8b98',outlinePrimaryColor:'#24313d',borderRadiusMedium:'12px'}}}},
-        callbacks:{onReady:()=>{$('#cardBrickLoading').hidden=true},onError:error=>{console.error('Mercado Pago Brick',error);toast('O formulário seguro do Mercado Pago encontrou um erro.','error')}}
-      });
-    }catch(e){brickEmail='';$('#cardBrickLoading').hidden=true;$('#cardWaiting').hidden=false;$('#cardWaiting').textContent=e.message;toast(e.message,'error')}
+    if(!validEmail(email)||!readyIdentity){await unmountBrick();$('#cardWaiting').hidden=false;$('#cardBrickLoading').hidden=true;return null}
+    if(!DehaxAPI.config.mpPublicKey){$('#cardWaiting').hidden=false;$('#cardWaiting').textContent='MP_PUBLIC_KEY ainda não foi configurada no Netlify.';return null}
+    const key=`${email}|${selectedPlan}|${selectedAmount()}`;
+    if(brickController&&brickKey===key)return brickController;
+    if(brickMountPromise&&brickKey===key)return brickMountPromise;
+
+    const mountSeq=++brickMountSeq;
+    const oldController=brickController;
+    brickController=null;brickEmail=email;brickKey=key;
+    $('#cardWaiting').hidden=true;$('#cardBrickLoading').hidden=false;$('#cardBrickError').hidden=true;$('#cardBrickError').textContent='';
+
+    const promise=(async()=>{
+      try{
+        if(oldController){try{await oldController.unmount()}catch{}}
+        $('#cardPaymentBrick_container').innerHTML='';
+        if(!window.MercadoPago)throw new Error('SDK do Mercado Pago não carregou. Atualize a página e tente novamente.');
+        if(!bricksBuilder){const mp=new MercadoPago(DehaxAPI.config.mpPublicKey,{locale:'pt-BR'});bricksBuilder=mp.bricks()}
+        const amount=selectedAmount();
+        const controller=await bricksBuilder.create('cardPayment','cardPaymentBrick_container',{
+          initialization:{amount,payer:{email}},
+          customization:{paymentMethods:{types:{excluded:['debit_card','prepaid_card']},minInstallments:1,maxInstallments:1},visual:{hidePaymentButton:true,style:{theme:'dark',customVariables:{baseColor:'#ff294d',buttonTextColor:'#ffffff',formBackgroundColor:'#080d13',inputBackgroundColor:'#0b1118',textPrimaryColor:'#f4f7fb',textSecondaryColor:'#7f8b98',outlinePrimaryColor:'#24313d',borderRadiusMedium:'12px'}}}},
+          callbacks:{
+            onReady:()=>{if(mountSeq===brickMountSeq){$('#cardBrickLoading').hidden=true;$('#cardBrickError').hidden=true}},
+            onError:error=>showBrickError(error)
+          }
+        });
+        if(mountSeq!==brickMountSeq||paymentMethod!=='card'||payerEmail()!==email||brickKey!==key){try{await controller.unmount()}catch{};return null}
+        brickController=controller;
+        return controller;
+      }catch(e){
+        if(mountSeq===brickMountSeq){brickEmail='';brickKey='';$('#cardBrickLoading').hidden=true;$('#cardWaiting').hidden=false;$('#cardWaiting').textContent=e?.message||'Não foi possível carregar o formulário seguro do cartão.';showBrickError(e)}
+        return null;
+      }
+    })();
+    brickMountPromise=promise;
+    try{return await promise}finally{if(brickMountPromise===promise)brickMountPromise=null}
   }
 
   async function ensureGuestIdentity(){
@@ -207,10 +249,16 @@
       $('#successTitle').textContent='PRO LIBERADO.';$('#successMessage').textContent=`${message} Você será direcionado para a área de membros.`;
       setTimeout(()=>location.href='/app/#home',1200);return;
     }
-    if(created||confirm){
+    if(confirm){
       $('#successTitle').textContent='PAGAMENTO APROVADO.';
       $('#successMessage').textContent=`${message} Enviamos a confirmação para ${email}. Confirme seu e-mail e depois entre na DeHax.`;
       action.hidden=false;action.textContent='JÁ CONFIRMEI MEU E-MAIL →';action.onclick=()=>location.href='/entrar/?next=%2Fapp%2F';
+      return;
+    }
+    if(created){
+      $('#successTitle').textContent='PAGAMENTO APROVADO.';
+      $('#successMessage').textContent=`${message} Sua conta foi criada e já pode ser usada para login.`;
+      action.hidden=false;action.textContent='ENTRAR NA MINHA CONTA →';action.onclick=()=>location.href='/entrar/?next=%2Fapp%2F';
       return;
     }
     $('#successTitle').textContent='PAGAMENTO APROVADO.';$('#successMessage').textContent=`${message} Agora entre na sua conta para acessar o conteúdo PRO.`;
@@ -269,8 +317,9 @@
     try{
       if(paymentMethod==='card'){
         if(!brickController){await ensureCardBrick();if(!brickController)throw new Error('Preencha um e-mail válido e aguarde o formulário seguro do cartão carregar.')}
-        const formData=await brickController.getFormData();
-        if(!formData?.token)throw new Error('Revise os dados do cartão antes de continuar.');
+        let formData;
+        try{formData=await brickController.getFormData()}catch(e){showBrickError(e);throw new Error(`Mercado Pago: ${brickErrorDetail(e)||e?.message||'não foi possível tokenizar o cartão.'}`)}
+        if(!formData?.token)throw new Error('Mercado Pago não gerou o token do cartão. Revise os campos e tente novamente.');
         await ensureGuestIdentity();
         await processCard(formData);
       }else{
@@ -289,10 +338,13 @@
       const userState=await softTimeout(DehaxAPI.currentUser(),6000,null);currentUser=userState.result;
       if(currentUser){
         const profileState=await softTimeout(DehaxAPI.currentProfile(),6000,null);profile=profileState.result;clearGuestSession();
-      }else restoreGuestSession();
+      }else{
+        // Uma nova visita ao checkout nunca deve ficar presa a uma tentativa anterior incompleta.
+        // A conta eventualmente criada continua detectável pelo e-mail, mas o formulário volta a ficar utilizável.
+        clearGuestSession();
+      }
       renderIdentity();renderSettings();renderPaymentMethod();
       if(!currentUser&&!checkoutToken)resetGuestProbe();
-      if(currentUser||checkoutToken)ensureCardBrick();
       $('#checkoutLoading').hidden=true;$('#checkoutContent').hidden=false;
     }catch(e){
       console.error('Checkout init',e);

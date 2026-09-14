@@ -22,81 +22,102 @@
 <body>
   <div class="noise"></div><div class="grid"></div>
   <header class="checkout-head">
-    <a class="logo-lockup" href="/app/"><img src="/assets/brand/dehax-logo.png" alt="DeHax"><span>DeHax <em>PRO</em></span></a>
-    <a class="btn ghost" href="/app/">VOLTAR</a>
+    <a class="logo-lockup" href="/"><img src="/assets/brand/dehax-logo.png" alt="DeHax"><span>DeHax <em>PRO</em></span></a>
+    <a class="btn ghost" href="/comunidade/">VOLTAR</a>
   </header>
 
   <main class="checkout-wrap">
     <section class="checkout-copy">
-      <div class="kicker">// Acesso completo</div>
-      <h1>ESCOLHA SEU<br><span>PLANO PRO.</span></h1>
-      <p>Checkout dentro da DeHax com processamento do Mercado Pago. Os dados sensíveis do cartão são tokenizados pelo Mercado Pago e não são armazenados pela DeHax.</p>
+      <div class="kicker">// Checkout rápido</div>
+      <h1>ATIVE SEU<br><span>DEHAX PRO.</span></h1>
+      <p>Cadastro e pagamento na mesma tela. O cartão é tokenizado pelo Mercado Pago: a DeHax não armazena número completo, validade ou CVV.</p>
       <div class="checkout-benefits">
-        <div><b>✓ Biblioteca completa</b><small>Assets, tutoriais, ferramentas e novidades.</small></div>
-        <div><b>✓ Mensal flexível</b><small>No cartão, renovação automática; no Pix, pagamento avulso pelo período exibido. Sem fidelidade.</small></div>
-        <div><b>✓ Você não perde dias</b><small>Ao cancelar o cartão, o ciclo já pago é preservado. No Pix, você pode renovar antes e o novo período começa somente depois do atual.</small></div>
-        <div><b>✓ Compra online protegida</b><small>Direito de arrependimento de 7 dias quando aplicável, conforme o CDC.</small></div>
+        <div><b>✓ Uma única etapa</b><small>Novo cliente cria a conta junto com o pagamento.</small></div>
+        <div><b>✓ Cartão protegido</b><small>Dados sensíveis processados pelo SDK oficial do Mercado Pago.</small></div>
+        <div><b>✓ Pix disponível</b><small>Mensal ou semestral, com renovação antecipada sem perda de dias.</small></div>
+        <div><b>✓ Acesso vinculado ao seu e-mail</b><small>Se você já possui conta, a compra é aplicada à conta existente.</small></div>
       </div>
     </section>
 
     <section class="checkout-card">
       <div id="checkoutLoading">Preparando checkout...</div>
       <div id="checkoutContent" hidden>
-        <div class="checkout-step"><span>00</span><b>SEUS DADOS</b></div>
-        <div class="checkout-account" id="checkoutAccountExisting" hidden>
-          <div class="account-avatar">✓</div><div><b id="checkoutAccountName">Membro DeHax</b><small id="checkoutAccountEmail">—</small></div><a href="/entrar/?next=%2Fcheckout%2F">TROCAR CONTA</a>
+        <div id="checkoutMain">
+          <div class="checkout-step"><span>00</span><b>SEUS DADOS</b></div>
+          <form class="checkout-identity-form" id="identityForm" novalidate>
+            <div class="two-checkout-fields">
+              <label class="field">Nome<input class="input" id="checkoutName" name="name" autocomplete="name" required placeholder="Seu nome"></label>
+              <label class="field">E-mail<input class="input" id="checkoutEmail" type="email" name="email" autocomplete="email" required placeholder="voce@email.com"></label>
+            </div>
+            <div class="two-checkout-fields" id="newAccountFields">
+              <label class="field">Confirme seu e-mail<input class="input" id="checkoutEmailConfirm" type="email" name="emailConfirm" autocomplete="email" required placeholder="Repita seu e-mail"></label>
+              <label class="field">Crie uma senha<input class="input" id="checkoutPassword" type="password" name="password" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
+            </div>
+            <div class="identity-check-line" id="emailCheckState">Digite seu e-mail para verificarmos sua conta.</div>
+            <div class="existing-account-notice" id="existingAccountNotice" hidden>
+              <b>ESTA CONTA JÁ EXISTE</b>
+              <span>Encontramos uma conta cadastrada com este e-mail. Nome, confirmação de e-mail e senha foram bloqueados porque você não precisa criar outra conta.</span>
+              <label><input type="checkbox" id="confirmExistingEmail"><span>Confirmo que este e-mail é meu e quero aplicar esta compra à conta já cadastrada.</span></label>
+              <small id="existingConfirmationHint"></small>
+            </div>
+            <div class="logged-account-notice" id="loggedAccountNotice" hidden>
+              <b>VOCÊ JÁ ESTÁ LOGADO</b><span>Seus dados foram preenchidos automaticamente. Basta escolher o plano e concluir o pagamento.</span>
+            </div>
+            <div class="signup-confirm-note" id="newAccountNotice">Sua conta será criada somente quando você clicar em pagar. Depois da compra, enviaremos a confirmação de cadastro para o e-mail informado. <strong>Você precisará confirmar o e-mail antes do primeiro login.</strong></div>
+          </form>
+
+          <div class="checkout-step"><span>01</span><b>ESCOLHA O PLANO</b></div>
+          <div class="plan-choice-grid">
+            <button class="plan-choice" type="button" data-plan="monthly" id="planMonthly">
+              <span class="plan-choice-tag">MENSAL</span>
+              <strong>R$ <b id="monthlyPrice">19,90</b><small>/mês</small></strong>
+              <p>Cartão recorrente ou Pix avulso pelo período exibido.</p>
+            </button>
+            <button class="plan-choice best active" type="button" data-plan="semester" id="planSemester">
+              <span class="save-badge" id="semesterDiscount">ECONOMIZE R$ 60,00</span>
+              <span class="plan-choice-tag">6 MESES</span>
+              <strong>R$ <b id="semesterMonthly">9,90</b><small>/mês equivalente</small></strong>
+              <p><b id="semesterTotalText">R$ 59,40 à vista</b> · pagamento único · sem renovação.</p>
+            </button>
+          </div>
+          <div class="plan-summary" id="planSummary"></div><div class="renewal-carry" id="renewalCarry" hidden></div>
+
+          <div class="checkout-step"><span>02</span><b>PAGAMENTO</b></div>
+          <div class="payment-switch" role="tablist" aria-label="Forma de pagamento">
+            <button class="payment-tab active" id="payCard" type="button" data-method="card"><span>▰</span><b>CARTÃO</b><small id="cardMethodText">Pagamento único · 1x</small></button>
+            <button class="payment-tab" id="payPix" type="button" data-method="pix"><span>◆</span><b>PIX</b><small id="pixMethodText">Pagamento único · 6 meses</small></button>
+          </div>
+
+          <div id="cardBox" class="payment-box">
+            <div class="payment-box-head"><div><b>Cartão processado pelo Mercado Pago</b><small id="cardBoxDescription">Pagamento seguro.</small></div><span class="secure-chip">TOKENIZAÇÃO SEGURA</span></div>
+            <div class="secure-note">A DeHax não recebe nem armazena o número completo do cartão, validade ou CVV.</div>
+            <div id="cardWaiting" class="brick-waiting">Informe um e-mail válido acima para carregar o formulário seguro do cartão.</div>
+            <div id="cardBrickLoading" class="brick-loading" hidden>Carregando formulário seguro...</div>
+            <div id="cardPaymentBrick_container"></div>
+          </div>
+
+          <div id="pixBox" class="pix-box" hidden>
+            <div class="pix-before" id="pixBefore">Ao concluir, a conta será preparada e o QR Code Pix será gerado nesta tela.</div>
+            <div id="pixGenerated" hidden>
+              <div class="pix-state" id="pixState">Gerando Pix...</div>
+              <div class="qr-shell" id="qrShell"><div class="qr-demo">PIX</div></div>
+              <label class="field">Pix Copia e Cola<textarea class="textarea" id="pixCode" readonly></textarea></label>
+              <div class="pix-actions"><button class="btn dark" id="copyPix" type="button">COPIAR PIX</button><button class="btn primary" id="checkPix" type="button">JÁ PAGUEI · VERIFICAR</button></div>
+              <div class="test-hint" id="pixTestHint" hidden>Ambiente de teste: este QR Code é gerado no sandbox do Mercado Pago.</div>
+            </div>
+          </div>
+
+          <label class="legal-check"><input type="checkbox" id="legalAccept"><span>Li e concordo com os <a href="/termos/" target="_blank">Termos de Uso</a>, <a href="/privacidade/" target="_blank">Política de Privacidade</a> e <a href="/cookies/" target="_blank">Política de Cookies</a>.</span></label>
+          <button class="btn primary checkout-pay-button" id="checkoutPay" type="button">PAGAR R$ 59,40 →</button>
+          <div class="checkout-status" id="checkoutStatus"></div>
         </div>
-        <form class="checkout-signup" id="checkoutSignupForm" hidden>
-          <div class="two-checkout-fields"><label class="field">Nome<input class="input" name="name" autocomplete="name" required placeholder="Seu nome"></label><label class="field">E-mail<input class="input" type="email" name="email" autocomplete="email" required placeholder="voce@email.com"></label></div>
-          <label class="field">Crie uma senha<input class="input" type="password" name="password" autocomplete="new-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
-          <div class="signup-confirm-note">Você poderá concluir o pagamento agora. Enviaremos um e-mail de confirmação; <strong>é necessário confirmar o e-mail antes do primeiro acesso à área de membros.</strong></div>
-          <button class="btn primary" type="submit">CRIAR CONTA E CONTINUAR →</button>
-          <p class="existing-login">Já possui conta? <a id="checkoutLoginLink" href="/entrar/?next=%2Fcheckout%2F">Entrar para preencher seus dados automaticamente</a>.</p>
-        </form>
-        <div class="email-confirmation-notice" id="emailConfirmationNotice" hidden><b>CONFIRME SEU E-MAIL</b><span>Sua conta foi criada e você pode finalizar a compra. Para entrar no painel depois, confirme o e-mail que enviamos para <strong id="confirmationEmail">seu endereço</strong>.</span></div>
 
-        <div id="purchaseArea" hidden>
-        <div class="checkout-step"><span>01</span><b>ESCOLHA O PLANO</b></div>
-        <div class="plan-choice-grid">
-          <button class="plan-choice" type="button" data-plan="monthly" id="planMonthly">
-            <span class="plan-choice-tag">MENSAL</span>
-            <strong>R$ <b id="monthlyPrice">19,90</b><small>/mês</small></strong>
-            <p>Cartão recorrente ou Pix avulso por 30 dias. No Pix, renove antes sem perder dias.</p>
-          </button>
-          <button class="plan-choice best active" type="button" data-plan="semester" id="planSemester">
-            <span class="save-badge" id="semesterDiscount">ECONOMIZE R$ 60,00</span>
-            <span class="plan-choice-tag">6 MESES</span>
-            <strong>R$ <b id="semesterMonthly">9,90</b><small>/mês equivalente</small></strong>
-            <p><b id="semesterTotalText">R$ 59,40 à vista</b> · pagamento único · sem renovação.</p>
-          </button>
-        </div>
-        <div class="plan-summary" id="planSummary"></div><div class="renewal-carry" id="renewalCarry" hidden></div>
-
-        <div class="checkout-step"><span>02</span><b>ESCOLHA O PAGAMENTO</b></div>
-        <div class="pay-grid" id="payGrid">
-          <button class="pay-option" id="payCard" type="button"><span class="pay-icon">▰</span><span><b>Cartão de crédito</b><small id="cardMethodText">Assinatura mensal recorrente</small></span><em>→</em></button>
-          <button class="pay-option" id="payPix" type="button"><span class="pay-icon">◆</span><span><b>PIX</b><small id="pixMethodText">Pagamento avulso · 30 dias de acesso</small></span><em>→</em></button>
-        </div>
-
-        <label class="legal-check"><input type="checkbox" id="legalAccept"><span>Li e concordo com os <a href="/termos/" target="_blank">Termos de Uso</a>, <a href="/privacidade/" target="_blank">Política de Privacidade</a> e <a href="/cookies/" target="_blank">Política de Cookies</a>. Estou ciente das condições do plano, cancelamento e direito de arrependimento aplicável às contratações online.</span></label>
-
-        <div id="cardBox" class="payment-box" hidden>
-          <div class="payment-box-head"><div><b>Cartão processado pelo Mercado Pago</b><small id="cardBoxDescription">Cobrança mensal recorrente.</small></div><span class="secure-chip">TOKENIZAÇÃO SEGURA</span></div>
-          <div class="secure-note">A DeHax não recebe nem armazena o número completo do cartão, validade ou CVV. O formulário abaixo é processado pelo SDK oficial do Mercado Pago.</div>
-          <div id="cardBrickLoading" class="brick-loading">Carregando formulário seguro...</div>
-          <div id="cardPaymentBrick_container"></div>
-          <button class="btn primary card-submit" id="submitCard" type="button">ASSINAR DEHAX PRO →</button>
-        </div>
-
-        <div id="pixBox" class="pix-box" hidden>
-          <div class="pix-state" id="pixState">Gerando Pix...</div>
-          <div class="qr-shell" id="qrShell"><div class="qr-demo">PIX</div></div>
-          <label class="field">Pix Copia e Cola<textarea class="textarea" id="pixCode" readonly></textarea></label>
-          <div class="pix-actions"><button class="btn dark" id="copyPix" type="button">COPIAR PIX</button><button class="btn primary" id="checkPix" type="button">JÁ PAGUEI · VERIFICAR</button></div>
-          <div class="test-hint" id="pixTestHint" hidden>Ambiente de teste: o QR Code sandbox valida a geração da Order, mas não representa uma cobrança real.</div>
-        </div>
-
-        <div id="checkoutStatus" class="checkout-status"></div>
+        <div class="checkout-success" id="checkoutSuccess" hidden>
+          <div class="success-mark">✓</div>
+          <div class="kicker">// Pagamento confirmado</div>
+          <h2 id="successTitle">DEU CERTO.</h2>
+          <p id="successMessage"></p>
+          <button class="btn primary" id="successAction" type="button" hidden>CONTINUAR →</button>
         </div>
       </div>
     </section>

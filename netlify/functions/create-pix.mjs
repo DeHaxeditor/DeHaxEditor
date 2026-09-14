@@ -16,7 +16,8 @@ export const handler=async event=>{
     const accessDays=monthly?Math.max(1,Math.round(Number(await getSetting('pix_access_days',30))||30)):null;
     const expiresAt=new Date(Date.now()+30*60*1000).toISOString(),localId=crypto.randomUUID();
     const payerEmail=mpDebug()?(process.env.MP_TEST_PIX_PAYER_EMAIL||'test_user_br@testuser.com'):user.email;
-    const payload={type:'online',total_amount:amount.toFixed(2),external_reference:`dehax:${user.id}:${localId}`,processing_mode:'automatic',transactions:{payments:[{amount:amount.toFixed(2),payment_method:{id:'pix',type:'bank_transfer'},expiration_time:'PT30M'}]},payer:{email:payerEmail}};
+    const payer={email:payerEmail};if(mpDebug())payer.first_name='APRO';
+    const payload={type:'online',total_amount:amount.toFixed(2),external_reference:`dehax:${user.id}:${localId}`,processing_mode:'automatic',transactions:{payments:[{amount:amount.toFixed(2),payment_method:{id:'pix',type:'bank_transfer'},expiration_time:'PT30M'}]},payer};
     const r=await fetch('https://api.mercadopago.com/v1/orders',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','X-Idempotency-Key':localId},body:JSON.stringify(payload)});
     const data=await r.json().catch(()=>({}));
     if(!r.ok)throw mpError(data,'Não foi possível gerar o Pix.');

@@ -158,7 +158,8 @@
     if (demoEnabled && !config.supabaseUrl) return {demo:true,tutorialId};
     return callFunction('tutorial-access',{tutorialId});
   }
-  async function createCheckoutSession(userId,email){if(demoEnabled&&!config.supabaseUrl)return {demo:true,checkoutToken:'demo-checkout',expiresAt:new Date(Date.now()+1800000).toISOString(),user:{id:userId||'demo-user',email,displayName:'Editor Demo'},emailConfirmed:false};return callFunction('checkout-session',{userId,email})}
+  async function probeCheckoutEmail(email){if(demoEnabled&&!config.supabaseUrl)return {demo:true,exists:/existente/i.test(email||''),emailConfirmed:true};return callFunction('checkout-session',{action:'probe',email})}
+  async function prepareCheckoutIdentity(payload={}){if(demoEnabled&&!config.supabaseUrl)return {demo:true,checkoutToken:'demo-checkout',expiresAt:new Date(Date.now()+1800000).toISOString(),created:!payload.confirmExisting,existing:!!payload.confirmExisting,user:{id:'demo-user',email:payload.email,displayName:payload.name||'Editor Demo'},emailConfirmed:false};return callFunction('checkout-session',{action:'prepare',...payload})}
   async function createSubscription(card,checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,authorized:true,status:'authorized',subscriptionId:'demo-sub'};return callFunction('create-subscription',{card,checkoutToken})}
   async function createCardPayment(card,planCode='semester',checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,paid:true,status:'approved',paymentId:'demo-card',accessExpiresAt:new Date(Date.now()+183*86400000).toISOString()};return callFunction('create-card-payment',{card,planCode,checkoutToken})}
   async function createPix(planCode='semester',checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{planCode,checkoutToken})}
@@ -188,5 +189,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createCheckoutSession,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

@@ -1,4 +1,4 @@
-# DeHax V2.2.2 — Checklist de configuração
+# DeHax V2.2.3 — Checklist de configuração
 
 Use este arquivo amanhã como ordem de trabalho. O código já está preparado; aqui entram apenas contas, chaves, conteúdo e testes reais.
 
@@ -72,10 +72,10 @@ Depois cadastrar assets e tutoriais reais.
 
 ## 4. Mercado Pago — checkout corrigido
 
-Antes do deploy da V2.2.2:
+Antes do deploy da V2.2.3:
 
 - se ainda não fez: executar `supabase/migration-v2.2.1.sql`;
-- depois executar `supabase/migration-v2.2.2.sql`;
+- se você já está na V2.2.2, não há migration adicional; mantenha `migration-v2.2.1.sql` e `migration-v2.2.2.sql` já aplicadas;
 - manter o plano mensal `DeHax PRO` no Mercado Pago em R$ 19,90/mês;
 - pegar a **Public Key** da aplicação de cartão/assinaturas;
 - usar token de cartão/assinaturas separado do token Orders/Pix;

@@ -1,8 +1,8 @@
-# DeHax Editor — Plataforma de Membros V2.2.2
+# DeHax Editor — Plataforma de Membros V2.2.3
 
-A V2.2.2 mantém a identidade visual aprovada da DeHax e acrescenta checkout para novos usuários, gestão de categorias em lote, upload em massa e planos/benefícios mais fáceis de administrar.
+A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
 
-## Destaques da V2.2.2
+## Destaques da V2.2.3
 
 - categorias e subcategorias podem ser pausadas/reativadas inteiras; assets vinculados somem da biblioteca e o backend bloqueia acesso enquanto estiverem pausadas;
 - exclusão de categoria/subcategoria pode remover todos os assets vinculados em uma única ação;
@@ -10,11 +10,14 @@ A V2.2.2 mantém a identidade visual aprovada da DeHax e acrescenta checkout par
 - vantagens dos planos FREE, Mensal e Semestral são editáveis pelo Admin;
 - landing PRO usa seletor deslizante Semestral/Mensal, começando no Semestral (R$ 9,90/mês equivalente; R$ 59,40 integral por 6 meses);
 - CTA principal do plano é `QUERO SER PRO` e leva diretamente ao checkout já com o plano selecionado;
-- checkout permite criar conta sem sair da compra; o Supabase envia confirmação de e-mail e a compra pode ser concluída antes da confirmação, mas o primeiro login exige a confirmação;
-- usuários já logados têm nome/e-mail preenchidos automaticamente no checkout e não veem campo de senha;
+- checkout agora é uma única etapa: novo cliente informa nome, e-mail, confirmação de e-mail, senha e pagamento na mesma tela; a conta só é preparada quando ele clica em pagar;
+- correção do cadastro via Supabase Auth REST: a resposta de signup com confirmação de e-mail ativa pode trazer o usuário diretamente, e não apenas em `data.user`;
+- se o e-mail já existir e o cliente não estiver logado, o checkout detecta a conta, bloqueia nome/confirmação/senha e permite aplicar a compra à conta existente após confirmação explícita do endereço;
+- usuários já logados têm nome/e-mail preenchidos automaticamente e concluem apenas o pagamento;
+- após compra: novo usuário confirma o e-mail e segue para login; usuário logado volta à área de membros; conta existente não logada segue para login;
 - miniaturas de vídeo/imagem continuam visíveis na biblioteca, e previews/downloads respeitam categorias pausadas.
 
-Para quem já está na V2.2.1, execute somente `supabase/migration-v2.2.2.sql` e consulte `ATUALIZAR-PARA-V2.2.2.md`.
+Para quem já está na V2.2.2, não há migration adicional nesta versão. Consulte `ATUALIZAR-PARA-V2.2.3.md`.
 
 ## O que mudou nesta versão
 
@@ -63,7 +66,7 @@ A versão web **não recebe nem envia cookies do navegador do usuário**. Recurs
 
 ---
 
-# 1. Testar a V2.2.2 localmente
+# 1. Testar a V2.2.3 localmente
 
 No Windows, extraia o ZIP e dê dois cliques em:
 
@@ -162,7 +165,7 @@ R2_MEDIA_PUBLIC_URL=
 
 ---
 
-# 4. Mercado Pago — V2.2.2
+# 4. Mercado Pago — V2.2.3
 
 ## Antes de testar
 

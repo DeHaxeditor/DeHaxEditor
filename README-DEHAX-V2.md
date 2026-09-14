@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.2.6
+# DeHax Editor — Plataforma de Membros V2.2.6.
 
 A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
 

@@ -1,4 +1,4 @@
-# DeHax Editor — atualização V2.2.6
+# DeHax Editor — atualização V2.2.7
 
 Esta versão corrige o erro `401 — Sessão inválida ou expirada` ao finalizar uma compra sem estar logado.
 
@@ -6,11 +6,11 @@ Esta versão corrige o erro `401 — Sessão inválida ou expirada` ao finalizar
 
 O frontend enviava `Authorization: Bearer ` mesmo quando não existia sessão autenticada. Em determinados ambientes o cabeçalho chegava ao backend como `Bearer`, e o backend interpretava isso como uma tentativa de autenticação Supabase, sem usar a sessão temporária de checkout.
 
-Na V2.2.6, o cabeçalho `Authorization` só é enviado quando realmente existe um access token. Usuários convidados continuam autenticando o pagamento pelo `checkoutToken` temporário criado pelo checkout.
+Na V2.2.7, o cabeçalho `Authorization` só é enviado quando realmente existe um access token. Usuários convidados continuam autenticando o pagamento pelo `checkoutToken` temporário criado pelo checkout.
 
 ## Como atualizar
 
-Substitua a V2.2.5 pela V2.2.6 na branch `teste` e aguarde o Branch Deploy.
+Substitua a V2.2.5 pela V2.2.7 na branch `teste` e aguarde o Branch Deploy.
 
 - Não há migration nova.
 - Não há variável nova no Netlify.

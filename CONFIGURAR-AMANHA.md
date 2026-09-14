@@ -1,4 +1,4 @@
-# DeHax V2.2.5 — Checklist de configuração
+# DeHax V2.2.6 — Checklist de configuração
 
 Use este arquivo amanhã como ordem de trabalho. O código já está preparado; aqui entram apenas contas, chaves, conteúdo e testes reais.
 

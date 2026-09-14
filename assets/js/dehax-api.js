@@ -143,8 +143,14 @@
   }
 
   async function callFunction(name,body={}){
-    if(token()==='demo-token') return {demo:true};
-    const r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers:{...jsonHeaders,Authorization:`Bearer ${token()}`},body:JSON.stringify(body)});
+    const accessToken=token();
+    if(accessToken==='demo-token') return {demo:true};
+    const headers={...jsonHeaders};
+    // Guest checkout requests must NOT send an empty Authorization header.
+    // Some runtimes normalize "Bearer " to "Bearer", which makes the backend
+    // think there is a logged-in session and reject the temporary checkout token.
+    if(accessToken) headers.Authorization=`Bearer ${accessToken}`;
+    const r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers,body:JSON.stringify(body)});
     const data=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(data.error||data.message||`Erro ${r.status}`);
     return data;

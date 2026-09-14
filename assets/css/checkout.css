@@ -6,5 +6,5 @@ body{overflow-x:hidden}.checkout-head{width:min(calc(100% - 40px),1180px);margin
 @media(max-width:900px){.checkout-wrap{grid-template-columns:1fr;gap:30px;margin-top:25px}.checkout-copy{position:static}.checkout-copy h1{font-size:18vw}.checkout-wrap,.checkout-head,.checkout-footer{width:calc(100% - 24px)}}
 @media(max-width:560px){.plan-choice-grid,.two-checkout-fields,.payment-switch,.pix-actions{grid-template-columns:1fr}.qr-shell{width:190px;height:190px}.checkout-card{padding:16px}.payment-box-head{display:block}.secure-chip{display:inline-block;margin-top:8px}.checkout-success h2{font-size:44px}}
 
-/* V2.2.5: diagnóstico visível do Brick durante homologação */
+/* V2.2.6: diagnóstico visível do Brick durante homologação */
 .brick-error{margin:10px 0;padding:10px 12px;border:1px solid rgba(255,41,77,.35);border-radius:10px;background:rgba(255,41,77,.08);color:#ff8196;font-size:.82rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}

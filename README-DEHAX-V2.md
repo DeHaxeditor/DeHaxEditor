@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.2.5
+# DeHax Editor — Plataforma de Membros V2.2.6
 
 A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
 
@@ -558,6 +558,13 @@ Antes de disponibilizar músicas, memes, trechos de filmes/séries, SFX ou outro
 - Aviso de renovação dentro da área de membros com antecedência configurável (`renewal_notice_days`, padrão 7).
 - A renovação automática via Pix não está habilitada neste checkout customizado; o cartão mensal continua recorrente automaticamente.
 
-## V2.2.5 — correção de homologação do checkout
+## V2.2.6 — correção de homologação do checkout
 
-A V2.2.5 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
+A V2.2.6 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
+
+
+## V2.2.6 — correção de sessão do checkout convidado
+
+A V2.2.6 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
+
+Não requer migration nem novas variáveis de ambiente.

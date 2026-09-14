@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail,purchaseGuard } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail,purchaseGuard,sendPurchaseConfirmation } from './_lib.mjs';
 
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
@@ -49,10 +49,13 @@ export const handler=async event=>{
       throw mpError(data,'Não foi possível criar a assinatura mensal.');
     }
     if(!data.id)throw mpError(data,'O Mercado Pago não retornou o identificador da assinatura.');
-    await sb('/rest/v1/payment_orders',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},body:{user_id:user.id,provider_order_id:String(data.id),kind:'subscription',status:String(data.status||'pending'),amount:null,access_days:null,plan_code:'monthly',payment_method:'card',raw:data}});
-    if(String(data.status||'').toLowerCase()==='authorized'){
+    const activated=String(data.status||'').toLowerCase()==='authorized',activatedAt=activated?new Date().toISOString():null;
+    const {data:orders}=await sb('/rest/v1/payment_orders',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{user_id:user.id,provider_order_id:String(data.id),kind:'subscription',status:String(data.status||'pending'),amount:Number.isFinite(providerPrice)?providerPrice:displayPrice,access_days:null,plan_code:'monthly',payment_method:'card',access_granted_at:activatedAt,raw:data}});
+    let order=orders?.[0]||null;if(!order){const {data:existing}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(data.id)}&kind=eq.subscription&select=*`);order=existing?.[0]||null}
+    if(activated){
       await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{plan:'pro',subscription_status:'authorized',subscription_id:String(data.id),access_expires_at:null,pro_started_at:p.pro_started_at||new Date().toISOString()}});
+      if(order?.id)await sendPurchaseConfirmation(order.id);
     }
-    return json(200,{subscriptionId:data.id,status:data.status||'pending',authorized:String(data.status||'').toLowerCase()==='authorized'});
+    return json(200,{subscriptionId:data.id,status:data.status||'pending',authorized:activated,purchaseCode:order?.purchase_code||null});
   }catch(e){return errResponse(e)}
 };

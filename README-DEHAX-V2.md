@@ -1,3 +1,7 @@
+# DeHax Editor V2.3.3
+
+A V2.3.3 adiciona retenção de assinatura, suporte/reembolso, ID público de compra e e-mail transacional pós-pagamento. Execute `supabase/migration-v2.3.3.sql` e configure `RESEND_API_KEY` no Netlify antes de testar os novos fluxos. Veja `ATUALIZAR-PARA-V2.3.3.md`.
+
 # DeHax Editor — Plataforma de Membros V2.3.2
 
 A V2.3.0 mantém o checkout e os pagamentos validados da V2.2.9 e abre a próxima fase da plataforma: proteção de upgrades, confirmação profissional de e-mail por código e a base completa da IA de áudio.

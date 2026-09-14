@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,purchaseGuard } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,purchaseGuard,semesterRetentionPrice } from './_lib.mjs';
 
 const money=v=>Math.max(.01,Number(String(v??'').replace(',','.').replace(/[^0-9.]/g,''))||0);
 const safeOrderRef=id=>`dhx_${String(id||'').replace(/[^a-zA-Z0-9_-]/g,'').replace(/-/g,'_').slice(0,56)}`.slice(0,64);
@@ -15,7 +15,9 @@ export const handler=async event=>{
 
     const token=mpOrdersToken();
     const monthly=planCode==='monthly';
-    const planAmount=money(await getSetting(monthly?'pro_monthly_price':'pro_semester_total',monthly?'19.90':'59.40'))||(monthly?19.90:59.40);
+    const normalPlanAmount=money(await getSetting(monthly?'pro_monthly_price':'pro_semester_total',monthly?'19.90':'59.40'))||(monthly?19.90:59.40);
+    const retention=monthly?{amount:normalPlanAmount,offer:null}:await semesterRetentionPrice(user.id,normalPlanAmount);
+    const planAmount=money(retention.amount)||normalPlanAmount;
     const providerAmount=mpDebug()?50:planAmount;
     const accessDays=monthly?Math.max(1,Math.round(Number(await getSetting('pix_access_days',30))||30)):null;
     const expiresAt=new Date(Date.now()+30*60*1000).toISOString(),localId=crypto.randomUUID();
@@ -62,10 +64,10 @@ export const handler=async event=>{
       throw mpError(data,'Não foi possível gerar o Pix.');
     }
     const payment=data.transactions?.payments?.[0]||{},pm=payment.payment_method||{};
-    await sb('/rest/v1/payment_orders',{
-      method:'POST',headers:{Prefer:'return=minimal'},
+    const {data:orders}=await sb('/rest/v1/payment_orders',{
+      method:'POST',headers:{Prefer:'return=representation'},
       body:{id:localId,user_id:user.id,provider_order_id:String(data.id||''),kind:'pix',status:String(data.status||'pending'),amount:planAmount,access_days:accessDays,plan_code:planCode,payment_method:'pix',access_granted_at:null,raw:data}
     });
-    return json(200,{orderId:data.id,localId,status:data.status,expiresAt,planCode,accessDays,qrCode:pm.qr_code||payment.qr_code||'',qrCodeBase64:pm.qr_code_base64||payment.qr_code_base64||'',ticketUrl:pm.ticket_url||payment.ticket_url||'',testMode:mpDebug(),providerAmount:providerAmount.toFixed(2)});
+    return json(200,{orderId:data.id,localId,status:data.status,expiresAt,planCode,accessDays,qrCode:pm.qr_code||payment.qr_code||'',qrCodeBase64:pm.qr_code_base64||payment.qr_code_base64||'',ticketUrl:pm.ticket_url||payment.ticket_url||'',testMode:mpDebug(),providerAmount:providerAmount.toFixed(2),purchaseCode:orders?.[0]?.purchase_code||null,retentionDiscount:retention.offer?Number(retention.offer.discount_percent||10):0});
   }catch(e){return errResponse(e)}
 };

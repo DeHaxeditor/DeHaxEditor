@@ -150,6 +150,57 @@ export async function cancelRecurringForSemesterUpgrade(userId,p){
   return {cancelled:true,accessUntil,subscriptionId:id};
 }
 
+
+// Retenção, compra pública e e-mail transacional — V2.3.3
+export async function retentionSettings(){
+  return {
+    discountPercent:Math.max(0,Math.min(50,Number(await getSetting('retention_discount_percent',10))||10)),
+    monthlyCycles:Math.max(1,Math.min(12,Number(await getSetting('retention_monthly_cycles',3))||3)),
+    refundDays:Math.max(1,Math.min(30,Number(await getSetting('refund_request_days',7))||7))
+  };
+}
+export async function activeRetentionOffer(userId,planCode){
+  const {data}=await sb(`/rest/v1/retention_offers?user_id=eq.${encodeURIComponent(userId)}&plan_code=eq.${encodeURIComponent(planCode)}&status=eq.active&select=*&order=created_at.desc&limit=1`);
+  return data?.[0]||null;
+}
+export async function recordExitFeedback({userId,subscriptionId=null,planCode,reason,decision}){
+  try{await sb('/rest/v1/subscription_exit_feedback',{method:'POST',headers:{Prefer:'return=minimal'},body:{user_id:userId,subscription_id:subscriptionId||null,plan_code:planCode,reason,decision}})}catch(e){console.warn('exit feedback',e?.message||e)}
+}
+export async function redeemSemesterRetentionForOrder(userId,orderId){
+  const offer=await activeRetentionOffer(userId,'semester');if(!offer)return null;
+  await sb(`/rest/v1/retention_offers?id=eq.${encodeURIComponent(offer.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:'redeemed',redeemed_order_id:orderId,completed_at:new Date().toISOString()}});
+  return offer;
+}
+export async function semesterRetentionPrice(userId,normalAmount){
+  const offer=await activeRetentionOffer(userId,'semester');if(!offer)return {amount:Number(normalAmount),offer:null};
+  const pct=Math.max(0,Math.min(50,Number(offer.discount_percent||10)||10));
+  return {amount:Math.round(Number(normalAmount)*(1-pct/100)*100)/100,offer};
+}
+function purchasePlanLabel(o){if(o?.kind==='subscription')return 'DeHax PRO Mensal';if(o?.plan_code==='semester')return 'DeHax PRO Semestral';return 'DeHax PRO Mensal'}
+function paymentMethodLabel(o){return String(o?.payment_method||o?.kind||'').toLowerCase()==='pix'?'Pix':String(o?.kind||'')==='subscription'?'Cartão recorrente':'Cartão'}
+function emailSafe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+export async function sendTransactionalEmail({to,subject,html,text}){
+  const key=env('RESEND_API_KEY',false);if(!key)return {sent:false,reason:'RESEND_API_KEY ausente'};
+  const fromEmail=env('RESEND_FROM_EMAIL',false)||'no-reply@auth.dehax.com.br';
+  const fromName=env('RESEND_FROM_NAME',false)||'DeHax Editor';
+  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({from:`${fromName} <${fromEmail}>`,to:[to],subject,html,text})});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(data?.message||'Falha ao enviar e-mail transacional.'),{status:r.status});return {sent:true,id:data.id||null};
+}
+export async function sendPurchaseConfirmation(orderId,{accessUntil=null}={}){
+  try{
+    const {data:rows}=await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(orderId)}&select=*`);const o=rows?.[0];if(!o||o.confirmation_email_sent_at)return {sent:false,reason:'already-or-missing'};
+    const {data:profiles}=await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(o.user_id)}&select=display_name,email`);const p=profiles?.[0]||{};if(!p.email)return {sent:false,reason:'email-missing'};
+    const purchaseCode=o.purchase_code||String(o.id);const label=purchasePlanLabel(o),amount=o.amount!=null?Number(o.amount):Number(await getSetting('pro_monthly_price','19.90'));
+    const amountText=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(amount||0),dateText=new Intl.DateTimeFormat('pt-BR',{dateStyle:'long',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(o.access_granted_at||o.created_at||Date.now()));
+    const accessText=accessUntil?`<p style="margin:16px 0 0;color:#8c98a6;font:13px/1.6 Arial,Helvetica,sans-serif">Acesso atual até <strong style="color:#fff">${emailSafe(new Intl.DateTimeFormat('pt-BR').format(new Date(accessUntil)))}</strong>.</p>`:'';
+    const html=`<!doctype html><html><body style="margin:0;background:#070a0f;color:#f4f7fb;font-family:Arial,Helvetica,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070a0f;padding:30px 14px"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;background:#0b1118;border:1px solid #1d2935;border-radius:18px"><tr><td style="height:4px;background:#00d9ff"></td></tr><tr><td style="padding:32px"><p style="margin:0;color:#00d9ff;font:bold 12px Arial,Helvetica,sans-serif;letter-spacing:.12em">DEHAX EDITOR</p><h1 style="margin:12px 0 8px;color:#fff;font:bold 28px Arial,Helvetica,sans-serif">Pagamento confirmado</h1><p style="margin:0 0 22px;color:#9aa7b4;font:14px/1.6 Arial,Helvetica,sans-serif">Seu pagamento foi confirmado. Guarde o ID abaixo: ele identifica esta compra no suporte e é obrigatório para solicitar reembolso.</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070b10;border:1px solid #23313e;border-radius:14px"><tr><td style="padding:18px"><p style="margin:0;color:#778593;font:11px Arial,Helvetica,sans-serif">ID DA COMPRA</p><p style="margin:7px 0 0;color:#fff;font:bold 24px Arial,Helvetica,sans-serif;letter-spacing:.06em">${emailSafe(purchaseCode)}</p></td></tr></table><p style="margin:22px 0 0;color:#d9e1e8;font:14px/1.65 Arial,Helvetica,sans-serif"><strong>${emailSafe(label)}</strong><br>${emailSafe(paymentMethodLabel(o))} · ${emailSafe(amountText)}<br>${emailSafe(dateText)}</p>${accessText}<p style="margin:22px 0 0;color:#6f7c89;font:11px/1.6 Arial,Helvetica,sans-serif">Não compartilhe este ID publicamente. Em caso de dúvida, use a área Suporte dentro da DeHax.</p></td></tr></table></td></tr></table></body></html>`;
+    const text=`DeHax Editor\nPagamento confirmado\nID da compra: ${purchaseCode}\nPlano: ${label}\nPagamento: ${paymentMethodLabel(o)}\nValor: ${amountText}\nData: ${dateText}${accessUntil?`\nAcesso até: ${new Intl.DateTimeFormat('pt-BR').format(new Date(accessUntil))}`:''}\n\nGuarde este ID. Ele é obrigatório para uma solicitação de reembolso.`;
+    const sent=await sendTransactionalEmail({to:p.email,subject:`Pagamento DeHax confirmado — ${purchaseCode}`,html,text});
+    if(sent.sent)await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(o.id)}&confirmation_email_sent_at=is.null`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{confirmation_email_sent_at:new Date().toISOString()}});
+    return sent;
+  }catch(e){console.warn('purchase confirmation email',orderId,e?.message||e);return {sent:false,reason:e?.message||'email-failed'}}
+}
+
 // IA de áudio — quotas internas DeHax. Os tokens abaixo são unidades da plataforma,
 // independentes dos créditos/custos do provedor de IA.
 export async function audioAiSettings(){

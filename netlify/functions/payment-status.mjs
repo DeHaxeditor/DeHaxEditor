@@ -1,4 +1,4 @@
-import { json,parseBody,requirePaymentProfile,errResponse,sb,mpOrdersToken,mpError,grantFixedProForOrder,cancelRecurringForSemesterUpgrade,profile } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,sb,mpOrdersToken,mpError,grantFixedProForOrder,cancelRecurringForSemesterUpgrade,profile,redeemSemesterRetentionForOrder,sendPurchaseConfirmation } from './_lib.mjs';
 
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
@@ -15,8 +15,10 @@ export const handler=async event=>{
     if(paid&&['monthly','semester'].includes(String(local.plan_code||''))){
       if(local.plan_code==='semester'){const current=await profile(user.id);await cancelRecurringForSemesterUpgrade(user.id,current||{});}
       accessExpiresAt=await grantFixedProForOrder(local.id);
+      if(local.plan_code==='semester')await redeemSemesterRetentionForOrder(user.id,local.id);
     }
     await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status,raw:data}});
-    return json(200,{status,paid,accessExpiresAt,planCode:local.plan_code,accessDays:local.access_days});
+    if(paid)await sendPurchaseConfirmation(local.id,{accessUntil:accessExpiresAt});
+    return json(200,{status,paid,accessExpiresAt,planCode:local.plan_code,accessDays:local.access_days,purchaseCode:local.purchase_code||null});
   }catch(e){return errResponse(e)}
 };

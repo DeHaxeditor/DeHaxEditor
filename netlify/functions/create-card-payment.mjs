@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,grantFixedProForOrder,purchaseGuard,cancelRecurringForSemesterUpgrade,profile } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,grantFixedProForOrder,purchaseGuard,cancelRecurringForSemesterUpgrade,profile,semesterRetentionPrice,redeemSemesterRetentionForOrder,sendPurchaseConfirmation } from './_lib.mjs';
 
 const money=v=>Math.max(.01,Number(String(v??'').replace(',','.').replace(/[^0-9.]/g,''))||0);
 const paidOrder=data=>String(data?.status||'')==='processed'||data?.transactions?.payments?.some(p=>String(p?.status||'')==='processed'&&(!p?.status_detail||String(p.status_detail)==='accredited'));
@@ -16,7 +16,8 @@ export const handler=async event=>{
     if(!card.token)return json(400,{error:'Token do cartão ausente. Preencha os dados do cartão novamente.'});
     if(!card.payment_method_id)return json(400,{error:'Meio de pagamento do cartão ausente.'});
 
-    const planAmount=money(await getSetting('pro_semester_total','59.40'))||59.40;
+    const normalPlanAmount=money(await getSetting('pro_semester_total','59.40'))||59.40;
+    const retention=await semesterRetentionPrice(user.id,normalPlanAmount),planAmount=money(retention.amount)||normalPlanAmount;
     // A documentação de sandbox da Orders API usa R$ 50,00 nos exemplos oficiais.
     // Mantemos o preço comercial no banco/UI e usamos o valor técnico somente quando MP_TEST_MODE=true.
     const providerAmount=mpDebug()?50:planAmount;
@@ -68,18 +69,21 @@ export const handler=async event=>{
     if(!data.id)throw mpError(data,'O Mercado Pago não retornou o identificador da order.');
 
     const status=String(data.status||'pending');
-    await sb('/rest/v1/payment_orders',{
-      method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},
+    const {data:orders}=await sb('/rest/v1/payment_orders',{
+      method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},
       body:{id:localId,user_id:user.id,provider_order_id:String(data.id),kind:'card_once',status,amount:planAmount,access_days:null,plan_code:'semester',payment_method:'card',access_granted_at:null,raw:data}
     });
+    const order=orders?.[0]||{id:localId,purchase_code:null};
     let accessExpiresAt=null;
     if(paidOrder(data)){
       await cancelRecurringForSemesterUpgrade(user.id,p);
       accessExpiresAt=await grantFixedProForOrder(localId);
+      if(retention.offer)await redeemSemesterRetentionForOrder(user.id,localId);
+      await sendPurchaseConfirmation(localId,{accessUntil:accessExpiresAt});
     }
     const payment=data.transactions?.payments?.[0]||{};
     const rejected=['failed','cancelled','canceled'].includes(status)||['rejected','failed','cancelled','canceled'].includes(String(payment.status||''));
     if(rejected)throw Object.assign(mpError(data,`Pagamento recusado${payment.status_detail?`: ${payment.status_detail}`:''}.`,422),{status:422});
-    return json(200,{paymentId:data.id,status,statusDetail:payment.status_detail||'',paid:!!accessExpiresAt,accessExpiresAt,testMode:mpDebug(),providerAmount:providerAmount.toFixed(2)});
+    return json(200,{paymentId:data.id,status,statusDetail:payment.status_detail||'',paid:!!accessExpiresAt,accessExpiresAt,testMode:mpDebug(),providerAmount:providerAmount.toFixed(2),purchaseCode:order?.purchase_code||null,retentionDiscount:retention.offer?Number(retention.offer.discount_percent||10):0});
   }catch(e){return errResponse(e)}
 };

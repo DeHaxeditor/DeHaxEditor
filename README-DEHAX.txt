@@ -1,4 +1,4 @@
-DEHAX EDITOR PLATFORM V2.3.2
+DEHAX EDITOR PLATFORM V2.3.3
 
 Base: Netlify + Supabase + Cloudflare R2 + YouTube não listado + Mercado Pago.
 
@@ -18,3 +18,18 @@ ATUALIZAÇÃO A PARTIR DA V2.2.9
 - Veja ATUALIZAR-PARA-V2.3.0.md.
 - Mercado Pago validado na V2.2.9 permanece sem mudanças de credenciais.
 - Para geração real de IA, configure ELEVENLABS_API_KEY e depois ative no Admin.
+
+
+NOVIDADES V2.3.3
+1. Cancelamento oculto para FREE e exibido apenas em situações elegíveis.
+2. Modal de retenção com motivo obrigatório e oferta de 10% antes da saída.
+3. Mensal recorrente: 10% nas próximas 3 cobranças; valor normal é restaurado automaticamente.
+4. Semestral: 10% reservado para a próxima compra de 6 meses (o semestral não renova automaticamente).
+5. Nova área Suporte com FAQ e solicitação de reembolso em até 7 dias.
+6. ID público de compra DHX exibido no histórico, no Admin e enviado por e-mail após pagamento.
+7. Admin recebe solicitações de reembolso e pode acompanhar status.
+
+ATUALIZAÇÃO V2.3.3
+- Execute supabase/migration-v2.3.3.sql uma única vez.
+- Configure RESEND_API_KEY no Netlify para o e-mail pós-pagamento.
+- Veja ATUALIZAR-PARA-V2.3.3.md.

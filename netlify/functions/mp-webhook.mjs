@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,sb,errResponse,mpSubscriptionsToken,mpOrdersToken,grantFixedProForOrder,cancelRecurringForSemesterUpgrade,profile } from './_lib.mjs';
+import { json,parseBody,sb,errResponse,mpSubscriptionsToken,mpOrdersToken,grantFixedProForOrder,cancelRecurringForSemesterUpgrade,profile,redeemSemesterRetentionForOrder,sendPurchaseConfirmation } from './_lib.mjs';
 
 function queryParams(event){
   if(event.queryStringParameters)return new URLSearchParams(Object.entries(event.queryStringParameters).filter(([,v])=>v!=null));
@@ -26,20 +26,24 @@ async function handleSubscription(id){
   const {data:pr}=await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=pro_started_at,access_expires_at`);const current=pr?.[0]||{};
   const candidate=status==='canceled'&&sub.next_payment_date?new Date(sub.next_payment_date):null,providerUntil=candidate&&Number.isFinite(candidate.getTime())&&candidate.getTime()>Date.now()?candidate.toISOString():null,existingUntil=status==='canceled'&&current.access_expires_at&&new Date(current.access_expires_at).getTime()>Date.now()?current.access_expires_at:null,accessUntil=providerUntil||existingUntil,keepCanceledAccess=status==='canceled'&&!!accessUntil;
   await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{plan:(isActive||keepCanceledAccess)?'pro':'free',subscription_status:status,subscription_id:sub.id,access_expires_at:keepCanceledAccess?accessUntil:null,pro_started_at:isActive?(current.pro_started_at||new Date().toISOString()):current.pro_started_at||null}});
-  try{await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.subscription`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status,raw:sub}})}catch{};return {status};
+  try{
+    const patch={status,raw:sub};if(isActive)patch.access_granted_at=new Date().toISOString();
+    await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.subscription`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:patch});
+    if(isActive){const {data:orders}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.subscription&select=id&limit=1`);if(orders?.[0]?.id)await sendPurchaseConfirmation(orders[0].id)}
+  }catch{};return {status};
 }
 async function handleOrder(id){
   const r=await fetch(`https://api.mercadopago.com/v1/orders/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${mpOrdersToken()}`}});if(!r.ok)return {ignored:'order-not-found'};
   const order=await r.json();const {data:rows}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&select=*`);const local=(rows||[]).find(x=>x.kind==='pix'||x.kind==='card_once');if(!local)return {ignored:'unknown-order'};
   const paid=String(order.status)==='processed'||order.transactions?.payments?.some(p=>String(p.status)==='processed'&&(!p.status_detail||String(p.status_detail)==='accredited'));
-  if(paid&&['monthly','semester'].includes(String(local.plan_code||''))){if(local.plan_code==='semester'){const current=await profile(local.user_id);await cancelRecurringForSemesterUpgrade(local.user_id,current||{});}await grantFixedProForOrder(local.id);}
-  await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(order.status||'pending'),raw:order}});return {status:order.status,paid};
+  let accessUntil=null;if(paid&&['monthly','semester'].includes(String(local.plan_code||''))){if(local.plan_code==='semester'){const current=await profile(local.user_id);await cancelRecurringForSemesterUpgrade(local.user_id,current||{});}accessUntil=await grantFixedProForOrder(local.id);if(local.plan_code==='semester')await redeemSemesterRetentionForOrder(local.user_id,local.id);}
+  await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(order.status||'pending'),raw:order}});if(paid)await sendPurchaseConfirmation(local.id,{accessUntil});return {status:order.status,paid};
 }
 async function handlePayment(id){
   const r=await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${mpSubscriptionsToken()}`}});if(!r.ok)return {ignored:'payment-not-found'};
   const payment=await r.json();const {data:rows}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.card_once&select=*`);const local=rows?.[0];if(!local)return {ignored:'unknown-payment'};
-  const paid=String(payment.status)==='approved';if(paid&&['monthly','semester'].includes(String(local.plan_code||'')))await grantFixedProForOrder(local.id);
-  await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(payment.status||'pending'),raw:payment}});return {status:payment.status,paid};
+  const paid=String(payment.status)==='approved';let accessUntil=null;if(paid&&['monthly','semester'].includes(String(local.plan_code||''))){accessUntil=await grantFixedProForOrder(local.id);if(local.plan_code==='semester')await redeemSemesterRetentionForOrder(local.user_id,local.id);}
+  await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(payment.status||'pending'),raw:payment}});if(paid)await sendPurchaseConfirmation(local.id,{accessUntil});return {status:payment.status,paid};
 }
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(200,{ok:true});

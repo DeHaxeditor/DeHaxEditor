@@ -3,7 +3,7 @@
   const $$=s=>[...document.querySelectorAll(s)];
   const GUEST_KEY='dehax_checkout_guest_v2';
   let profile=null,currentUser=null,checkoutToken='',checkoutIdentity=null,guestCreated=false,needsEmailConfirmation=false;
-  let settings={},selectedPlan=new URLSearchParams(location.search).get('plan')==='monthly'?'monthly':'semester',paymentMethod='card';
+  let settings={},retention={monthly:null,semester:null},selectedPlan=new URLSearchParams(location.search).get('plan')==='monthly'?'monthly':'semester',paymentMethod='card';
   let brickController=null,bricksBuilder=null,brickBuilderPublicKey='',brickEmail='',brickKey='',brickMountPromise=null,brickMountSeq=0,orderId='',orderPlan='',poll=null;
   let probeTimer=null,probeSeq=0,probeResolvedEmail='',probeExists=false,probeEmailConfirmed=true;
 
@@ -12,7 +12,9 @@
   const money=v=>num(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const validEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());
   const monthlyPrice=()=>num(settings.pro_monthly_price||settings.pro_price||'19.90')||19.9;
-  const semesterTotal=()=>num(settings.pro_semester_total||'59.40')||59.4;
+  const normalSemesterTotal=()=>num(settings.pro_semester_total||'59.40')||59.4;
+  const semesterOffer=()=>retention?.semester&&String(retention.semester.status||'active')==='active'?retention.semester:null;
+  const semesterTotal=()=>{const offer=semesterOffer(),discounted=num(offer?.discounted_amount??offer?.discountedAmount);return discounted>0?discounted:normalSemesterTotal()};
   const semesterMonthly=()=>num(settings.pro_semester_monthly_equiv||'9.90')||9.9;
   const pixDays=()=>Math.max(1,Math.round(num(settings.pix_access_days||30)||30));
   const selectedAmount=()=>selectedPlan==='monthly'?monthlyPrice():semesterTotal();
@@ -98,8 +100,10 @@
     try{const r=await DehaxAPI.supabaseFetch('/rest/v1/app_settings?key=in.(pro_price,pro_monthly_price,pro_semester_monthly_equiv,pro_semester_total,pix_access_days)&select=key,value');if(r.ok)for(const row of await r.json())settings[row.key]=row.value}catch{}
   }
   function renderSettings(){
-    const m=monthlyPrice(),s=semesterTotal(),eq=semesterMonthly(),regular=m*6,saving=Math.max(0,regular-s),pct=regular?Math.round((saving/regular)*100):0;
-    $('#monthlyPrice').textContent=money(m);$('#semesterMonthly').textContent=money(eq);$('#semesterTotalText').textContent=`R$ ${money(s)} à vista`;$('#semesterDiscount').textContent=`ECONOMIZE R$ ${money(saving)} · ${pct}% OFF`;
+    const m=monthlyPrice(),s=semesterTotal(),normal=normalSemesterTotal(),offer=semesterOffer(),eq=offer?s/6:semesterMonthly(),regular=m*6,saving=Math.max(0,regular-s),pct=offer?Math.round((1-s/Math.max(.01,normal))*100):(regular?Math.round((saving/regular)*100):0);
+    $('#monthlyPrice').textContent=money(m);$('#semesterMonthly').textContent=money(eq);$('#semesterTotalText').textContent=offer?`R$ ${money(s)} à vista · de R$ ${money(normal)}`:`R$ ${money(s)} à vista`;
+    $('#semesterDiscount').textContent=offer?`BENEFÍCIO DE PERMANÊNCIA · ${pct}% OFF`:`ECONOMIZE R$ ${money(saving)} · ${pct}% OFF`;
+    $('#planSemester')?.classList.toggle('retention-benefit',!!offer);
     renderPlan();
   }
   async function unmountBrick(){
@@ -140,7 +144,8 @@
     $('#pixMethodText').textContent=sem?'Pagamento único · 6 meses':`Pagamento avulso · ${pixDays()} dias`;
     $('#cardBoxDescription').textContent=sem?`Pagamento único de R$ ${money(semesterTotal())}, em 1x. Acesso PRO por 6 meses.`:`R$ ${money(monthlyPrice())}/mês em cobrança recorrente. Você pode cancelar quando quiser; o período já pago é preservado.`;
     const cardTestHint=$('#cardTestHint');if(cardTestHint)cardTestHint.hidden=!(sem&&DehaxAPI.config.mpTestMode);
-    $('#planSummary').innerHTML=sem?`<b>SEMESTRAL:</b> pagamento integral de <strong>R$ ${money(semesterTotal())}</strong> e 6 meses de PRO, sem renovação automática.`:`<b>MENSAL:</b> cartão em <strong>R$ ${money(monthlyPrice())}/mês</strong> com renovação automática, ou Pix avulso de <strong>R$ ${money(monthlyPrice())}</strong> por ${pixDays()} dias.`;
+    const semOffer=semesterOffer();
+    $('#planSummary').innerHTML=sem?(semOffer?`<b>SEMESTRAL COM BENEFÍCIO:</b> seu desconto de permanência está ativo. Pagamento único de <strong>R$ ${money(semesterTotal())}</strong> <s>R$ ${money(normalSemesterTotal())}</s> e 6 meses de PRO, sem renovação automática.`:`<b>SEMESTRAL:</b> pagamento integral de <strong>R$ ${money(semesterTotal())}</strong> e 6 meses de PRO, sem renovação automática.`):`<b>MENSAL:</b> cartão em <strong>R$ ${money(monthlyPrice())}/mês</strong> com renovação automática, ou Pix avulso de <strong>R$ ${money(monthlyPrice())}</strong> por ${pixDays()} dias.`;
     const until=activeUntil(),carry=$('#renewalCarry');
     if(until&&!recurringActive()){const dt=new Intl.DateTimeFormat('pt-BR').format(until);carry.hidden=false;carry.innerHTML=`<b>RENOVAÇÃO ANTECIPADA:</b> seu acesso atual vai até <strong>${dt}</strong>. No pagamento avulso, o novo período começa depois dessa data — você não perde nenhum dia.`}else carry.hidden=true;
     const url=new URL(location.href);url.searchParams.set('plan',selectedPlan);history.replaceState(null,'',url.pathname+url.search);
@@ -373,6 +378,7 @@
       const userState=await softTimeout(DehaxAPI.currentUser(),6000,null);currentUser=userState.result;
       if(currentUser){
         const profileState=await softTimeout(DehaxAPI.currentProfile(),6000,null);profile=profileState.result;clearGuestSession();
+        const overviewState=await softTimeout(DehaxAPI.accountOverview(),6000,null);retention=overviewState.result?.retention||retention;
         if(currentTier()==='monthly')selectedPlan='semester';
         if(currentTier()==='semester')selectedPlan='semester';
       }else{

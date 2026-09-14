@@ -108,3 +108,77 @@ export async function grantFixedPro(userId,{months=6,status='semester_active'}={
 }
 
 export async function grantFixedProForOrder(orderId){const {data}=await sb('/rest/v1/rpc/grant_fixed_pro_for_order',{method:'POST',body:{p_order_id:orderId}});return typeof data==='string'?data:(Array.isArray(data)?data[0]:data)||null}
+
+// Membership / upgrade helpers — V2.3.0
+export function membershipTier(p){
+  if(!activePro(p))return 'free';
+  const status=String(p?.subscription_status||'').toLowerCase();
+  if(status==='semester_active')return 'semester';
+  if(p?.subscription_id&&['authorized','active','trialing'].includes(status))return 'monthly';
+  if(status==='pix_active')return 'monthly';
+  if(status==='canceled'&&p?.access_expires_at&&new Date(p.access_expires_at).getTime()>Date.now())return 'monthly';
+  if(status==='manual')return 'monthly';
+  return 'monthly';
+}
+export function purchaseGuard(p,planCode){
+  const tier=membershipTier(p);
+  if(tier==='semester')throw Object.assign(new Error('Seu plano PRO semestral já está ativo. Não é necessário comprar o PRO novamente.'),{status:409,expose:true,code:'SEMESTER_ALREADY_ACTIVE'});
+  if(tier==='monthly'&&planCode==='monthly')throw Object.assign(new Error('Seu PRO mensal já está ativo. A única opção disponível agora é fazer upgrade para o plano semestral.'),{status:409,expose:true,code:'MONTHLY_ALREADY_ACTIVE'});
+  return tier;
+}
+export async function cancelRecurringForSemesterUpgrade(userId,p){
+  const status=String(p?.subscription_status||'').toLowerCase();
+  if(!p?.subscription_id||!['authorized','active','trialing'].includes(status))return {cancelled:false,accessUntil:p?.access_expires_at||null};
+  const id=String(p.subscription_id),headers={Authorization:`Bearer ${mpSubscriptionsToken()}`,'Content-Type':'application/json'};
+  const currentRes=await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(id)}`,{headers});
+  const current=await currentRes.json().catch(()=>({}));
+  if(!currentRes.ok)throw mpError(current,'O pagamento semestral foi aprovado, mas não foi possível consultar a assinatura mensal para concluir o upgrade. Tente novamente em alguns segundos.');
+  if(String(current.external_reference||'')!==String(userId))throw Object.assign(new Error('A assinatura mensal vinculada não corresponde a esta conta.'),{status:403,expose:true});
+  let accessUntil=null;
+  const nextDate=current.next_payment_date?new Date(current.next_payment_date):null;
+  if(nextDate&&Number.isFinite(nextDate.getTime())&&nextDate.getTime()>Date.now())accessUntil=nextDate.toISOString();
+  if(!accessUntil&&p.access_expires_at&&new Date(p.access_expires_at).getTime()>Date.now())accessUntil=p.access_expires_at;
+  if(!accessUntil&&p.pro_started_at){
+    let cycle=new Date(p.pro_started_at),guard=0;
+    if(Number.isFinite(cycle.getTime())){while(cycle.getTime()<=Date.now()&&guard++<60)cycle=addCalendarMonths(cycle,1);if(cycle.getTime()>Date.now())accessUntil=cycle.toISOString()}
+  }
+  const cancelRes=await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(id)}`,{method:'PUT',headers,body:JSON.stringify({status:'canceled'})});
+  const canceled=await cancelRes.json().catch(()=>({}));
+  if(!cancelRes.ok)throw mpError(canceled,'O pagamento semestral foi aprovado, mas não foi possível cancelar a renovação mensal automaticamente. Tente novamente em alguns segundos.');
+  await sb(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{subscription_status:'canceled',plan:'pro',access_expires_at:accessUntil,subscription_id:id}});
+  try{await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.subscription`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:'canceled',raw:canceled}})}catch{}
+  return {cancelled:true,accessUntil,subscriptionId:id};
+}
+
+// IA de áudio — quotas internas DeHax. Os tokens abaixo são unidades da plataforma,
+// independentes dos créditos/custos do provedor de IA.
+export async function audioAiSettings(){
+  const keys=['ai_audio_enabled','ai_audio_provider','ai_audio_pro_tokens_per_cycle','ai_audio_token_cycle_days','ai_audio_narration_tokens_per_1000_chars','ai_audio_sfx_tokens_per_second','ai_audio_storage_days','ai_audio_storage_gb_per_user','ai_audio_max_narration_chars','ai_audio_max_sfx_seconds','ai_audio_voice_limit'];
+  const out={};
+  for(const k of keys)out[k]=await getSetting(k,null);
+  return {
+    enabled:out.ai_audio_enabled===true||String(out.ai_audio_enabled)==='true',
+    provider:String(out.ai_audio_provider||'elevenlabs'),
+    tokensPerCycle:Math.max(0,Number(out.ai_audio_pro_tokens_per_cycle??1000)||0),
+    cycleDays:Math.max(1,Number(out.ai_audio_token_cycle_days??30)||30),
+    narrationPer1k:Math.max(1,Number(out.ai_audio_narration_tokens_per_1000_chars??50)||50),
+    sfxPerSecond:Math.max(1,Number(out.ai_audio_sfx_tokens_per_second??10)||10),
+    storageDays:Math.max(1,Number(out.ai_audio_storage_days??30)||30),
+    storageGb:Math.max(.1,Number(out.ai_audio_storage_gb_per_user??1)||1),
+    maxNarrationChars:Math.max(100,Number(out.ai_audio_max_narration_chars??5000)||5000),
+    maxSfxSeconds:Math.max(.5,Math.min(30,Number(out.ai_audio_max_sfx_seconds??30)||30)),
+    voiceLimit:Math.max(1,Math.min(50,Number(out.ai_audio_voice_limit??12)||12))
+  };
+}
+export function audioCycleWindow(p,cycleDays=30){
+  const ms=Math.max(1,Number(cycleDays)||30)*86400000;
+  let anchor=new Date(p?.pro_started_at||p?.created_at||Date.now());
+  if(!Number.isFinite(anchor.getTime())||anchor.getTime()>Date.now())anchor=new Date();
+  const elapsed=Math.max(0,Date.now()-anchor.getTime()),idx=Math.floor(elapsed/ms);
+  const start=new Date(anchor.getTime()+idx*ms),end=new Date(start.getTime()+ms);
+  return {start:start.toISOString(),end:end.toISOString()};
+}
+export function audioTokenCost(kind,text,settings,durationSeconds=5){
+  if(kind==='narration')return Math.max(1,Math.ceil(Math.max(1,String(text||'').length)/1000)*settings.narrationPer1k);
+  return Math.max(1,Math.ceil(Math.max(.5,Number(durationSeconds)||5)*settings.sfxPerSecond));
+}

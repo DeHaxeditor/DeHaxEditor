@@ -8,3 +8,4 @@ body{overflow-x:hidden}.checkout-head{width:min(calc(100% - 40px),1180px);margin
 
 /* V2.2.6: diagnóstico visível do Brick durante homologação */
 .brick-error{margin:10px 0;padding:10px 12px;border:1px solid rgba(255,41,77,.35);border-radius:10px;background:rgba(255,41,77,.08);color:#ff8196;font-size:.82rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.purchase-eligibility{margin:12px 0 4px;padding:13px 15px;border:1px solid rgba(0,217,255,.26);background:rgba(0,217,255,.065);border-radius:12px;color:#b9c6d2;font-size:13px;line-height:1.55}.purchase-eligibility b,.purchase-eligibility strong{color:#fff}.plan-choice:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.55)}

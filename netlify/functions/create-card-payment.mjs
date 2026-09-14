@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,grantFixedProForOrder } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,grantFixedProForOrder,purchaseGuard,cancelRecurringForSemesterUpgrade,profile } from './_lib.mjs';
 
 const money=v=>Math.max(.01,Number(String(v??'').replace(',','.').replace(/[^0-9.]/g,''))||0);
 const paidOrder=data=>String(data?.status||'')==='processed'||data?.transactions?.payments?.some(p=>String(p?.status||'')==='processed'&&(!p?.status_detail||String(p.status_detail)==='accredited'));
@@ -10,10 +10,9 @@ export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
     const body=parseBody(event);const {user,p}=await requirePaymentProfile(event,body);
-    const recurringActive=!!p.subscription_id&&['authorized','active','trialing'].includes(String(p.subscription_status||'').toLowerCase());
-    if(recurringActive)return json(409,{error:'Você já possui uma assinatura mensal recorrente ativa. Cancele a renovação mensal antes de contratar o semestral.'});
-    const card=body.card||{};
     if(body.planCode!=='semester')return json(400,{error:'Plano de pagamento avulso inválido.'});
+    purchaseGuard(p,'semester');
+    const card=body.card||{};
     if(!card.token)return json(400,{error:'Token do cartão ausente. Preencha os dados do cartão novamente.'});
     if(!card.payment_method_id)return json(400,{error:'Meio de pagamento do cartão ausente.'});
 
@@ -74,7 +73,10 @@ export const handler=async event=>{
       body:{id:localId,user_id:user.id,provider_order_id:String(data.id),kind:'card_once',status,amount:planAmount,access_days:null,plan_code:'semester',payment_method:'card',access_granted_at:null,raw:data}
     });
     let accessExpiresAt=null;
-    if(paidOrder(data))accessExpiresAt=await grantFixedProForOrder(localId);
+    if(paidOrder(data)){
+      await cancelRecurringForSemesterUpgrade(user.id,p);
+      accessExpiresAt=await grantFixedProForOrder(localId);
+    }
     const payment=data.transactions?.payments?.[0]||{};
     const rejected=['failed','cancelled','canceled'].includes(status)||['rejected','failed','cancelled','canceled'].includes(String(payment.status||''));
     if(rejected)throw Object.assign(mpError(data,`Pagamento recusado${payment.status_detail?`: ${payment.status_detail}`:''}.`,422),{status:422});

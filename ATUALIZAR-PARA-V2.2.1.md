@@ -159,5 +159,5 @@ Como esta revisão altera a função SQL `grant_fixed_pro_for_order`, use o arqu
 A renovação automática via Pix não foi ativada nesta integração customizada. O checkout interno mantém Pix via QR/Orders como renovação manual e cartão mensal como recorrência automática.
 
 
-### V2.2.9 — Orders
+### V2.3.0 — Orders
 Para cartão semestral e Pix em teste, configure `MP_ORDERS_PUBLIC_KEY` e `MP_ORDERS_ACCESS_TOKEN` com o par de **Credenciais de teste** da aplicação Checkout API via Orders API. O mensal recorrente continua usando as credenciais de Assinaturas.

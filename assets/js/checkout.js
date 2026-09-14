@@ -20,6 +20,16 @@
   const selectedCardPublicKey=()=>selectedPlan==='monthly'?(DehaxAPI.config.mpSubscriptionsPublicKey||DehaxAPI.config.mpPublicKey||''):(DehaxAPI.config.mpOrdersPublicKey||'');
   const payerEmail=()=>String(currentUser?.email||checkoutIdentity?.email||$('#checkoutEmail')?.value||'').trim().toLowerCase();
   const recurringActive=()=>!!profile?.subscription_id&&['authorized','active','trialing'].includes(String(profile?.subscription_status||'').toLowerCase());
+  const currentTier=()=>{
+    if(!profile||profile.plan!=='pro')return 'free';
+    const status=String(profile.subscription_status||'').toLowerCase();
+    const expiry=profile.access_expires_at?new Date(profile.access_expires_at).getTime():null;
+    if(expiry&&expiry<=Date.now())return 'free';
+    if(status==='semester_active')return 'semester';
+    if(['authorized','active','trialing','pix_active','manual','canceled'].includes(status))return 'monthly';
+    return 'free';
+  };
+  const purchaseBlocked=()=>{const tier=currentTier();return tier==='semester'||(tier==='monthly'&&selectedPlan==='monthly')};
   const activeUntil=()=>profile?.access_expires_at&&new Date(profile.access_expires_at).getTime()>Date.now()?new Date(profile.access_expires_at):null;
   const accepted=()=>{if($('#legalAccept').checked)return true;toast('Confirme a leitura dos termos antes de continuar.','error');return false};
   const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
@@ -117,7 +127,14 @@
     el.hidden=false;el.textContent=`Mercado Pago: ${detail}`;
   }
   function renderPlan(){
-    $$('[data-plan]').forEach(b=>b.classList.toggle('active',b.dataset.plan===selectedPlan));
+    const tier=currentTier();
+    if(tier==='monthly'&&selectedPlan==='monthly')selectedPlan='semester';
+    if(tier==='semester')selectedPlan='semester';
+    $$('[data-plan]').forEach(b=>{b.classList.toggle('active',b.dataset.plan===selectedPlan);b.disabled=tier==='semester'||(tier==='monthly'&&b.dataset.plan==='monthly');});
+    const eligibility=$('#purchaseEligibility');
+    if(tier==='monthly'){eligibility.hidden=false;eligibility.innerHTML='<b>VOCÊ JÁ É PRO MENSAL.</b> O mensal não pode ser comprado novamente. Seu upgrade disponível é o <strong>Semestral</strong>. Ao confirmar o upgrade, a renovação mensal é cancelada automaticamente e os 6 meses começam após o período mensal já pago.';}
+    else if(tier==='semester'){eligibility.hidden=false;const until=profile?.access_expires_at?new Intl.DateTimeFormat('pt-BR').format(new Date(profile.access_expires_at)):'';eligibility.innerHTML=`<b>SEU PRO SEMESTRAL JÁ ESTÁ ATIVO.</b>${until?` Seu acesso vai até <strong>${until}</strong>.`:''} Não é necessário comprar o PRO novamente.`;}
+    else eligibility.hidden=true;
     const sem=selectedPlan==='semester';
     $('#cardMethodText').textContent=sem?'Pagamento único · 1x sem parcelamento':'Assinatura mensal recorrente';
     $('#pixMethodText').textContent=sem?'Pagamento único · 6 meses':`Pagamento avulso · ${pixDays()} dias`;
@@ -136,8 +153,10 @@
     if(paymentMethod==='card')ensureCardBrick();
   }
   function updatePayButton(){
-    const amount=money(selectedAmount());
-    $('#checkoutPay').textContent=paymentMethod==='pix'?`GERAR PIX DE R$ ${amount} →`:(selectedPlan==='monthly'?`ASSINAR POR R$ ${amount}/MÊS →`:`PAGAR R$ ${amount} EM 1X →`);
+    const amount=money(selectedAmount()),btn=$('#checkoutPay');
+    if(purchaseBlocked()){btn.disabled=true;btn.textContent=currentTier()==='semester'?'PRO SEMESTRAL JÁ ATIVO':'MENSAL JÁ ATIVO';return}
+    btn.disabled=false;
+    btn.textContent=paymentMethod==='pix'?`GERAR PIX DE R$ ${amount} →`:(selectedPlan==='monthly'?`ASSINAR POR R$ ${amount}/MÊS →`:`PAGAR R$ ${amount} EM 1X →`);
   }
 
   async function probeEmailNow(force=false){
@@ -267,7 +286,7 @@
     if(confirm){
       $('#successTitle').textContent='PAGAMENTO APROVADO.';
       $('#successMessage').textContent=`${message} Enviamos a confirmação para ${email}. Confirme seu e-mail e depois entre na DeHax.`;
-      action.hidden=false;action.textContent='JÁ CONFIRMEI MEU E-MAIL →';action.onclick=()=>location.href='/entrar/?next=%2Fapp%2F';
+      action.hidden=false;action.textContent='CONFIRMAR E-MAIL COM CÓDIGO →';action.onclick=()=>location.href=`/confirmar-email/?email=${encodeURIComponent(email)}&next=${encodeURIComponent('/app/')}`;
       return;
     }
     if(created){
@@ -296,7 +315,7 @@
   }
 
   async function startPix(){
-    if(recurringActive())throw new Error('Sua cobrança mensal no cartão já está em renovação automática. Cancele primeiro a recorrência em Minha Conta; o acesso já pago será preservado.');
+    if(recurringActive()&&selectedPlan!=='semester')throw new Error('Seu PRO mensal já está ativo. A opção disponível agora é o upgrade para o plano semestral.');
     orderPlan=selectedPlan;const d=await DehaxAPI.createPix(selectedPlan,checkoutToken);orderId=String(d.orderId||'');
     $('#pixBefore').hidden=true;$('#pixGenerated').hidden=false;$('#pixCode').value=d.qrCode||'';
     if(d.qrCodeBase64)$('#qrShell').innerHTML=`<img src="data:image/png;base64,${String(d.qrCodeBase64).replace(/^data:image\/\w+;base64,/, '')}" alt="QR Code Pix">`;else $('#qrShell').innerHTML='<div class="qr-demo">PIX</div>';
@@ -327,6 +346,7 @@
   $('#checkPix').onclick=checkPayment;
 
   $('#checkoutPay').onclick=async()=>{
+    if(purchaseBlocked()){toast(currentTier()==='semester'?'Seu plano semestral já está ativo.':'Seu PRO mensal já está ativo. Faça upgrade para o semestral.','error');return}
     if(!accepted())return;
     const btn=$('#checkoutPay'),original=btn.textContent;btn.disabled=true;btn.textContent='PROCESSANDO...';
     try{
@@ -353,6 +373,8 @@
       const userState=await softTimeout(DehaxAPI.currentUser(),6000,null);currentUser=userState.result;
       if(currentUser){
         const profileState=await softTimeout(DehaxAPI.currentProfile(),6000,null);profile=profileState.result;clearGuestSession();
+        if(currentTier()==='monthly')selectedPlan='semester';
+        if(currentTier()==='semester')selectedPlan='semester';
       }else{
         // Uma nova visita ao checkout nunca deve ficar presa a uma tentativa anterior incompleta.
         // A conta eventualmente criada continua detectável pelo e-mail, mas o formulário volta a ficar utilizável.

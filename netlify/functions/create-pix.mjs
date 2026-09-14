@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,getSetting,sb,mpOrdersToken,mpDebug,mpError,purchaseGuard } from './_lib.mjs';
 
 const money=v=>Math.max(.01,Number(String(v??'').replace(',','.').replace(/[^0-9.]/g,''))||0);
 const safeOrderRef=id=>`dhx_${String(id||'').replace(/[^a-zA-Z0-9_-]/g,'').replace(/-/g,'_').slice(0,56)}`.slice(0,64);
@@ -9,10 +9,9 @@ export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
     const body=parseBody(event);const {user,p}=await requirePaymentProfile(event,body);
-    const recurringActive=!!p.subscription_id&&['authorized','active','trialing'].includes(String(p.subscription_status||'').toLowerCase());
-    if(recurringActive)return json(409,{error:'Você já possui renovação automática ativa no cartão. Cancele a recorrência em Minha Conta antes de mudar para Pix; o período já pago será preservado.'});
     const planCode=String(body.planCode||'');
     if(!['monthly','semester'].includes(planCode))return json(400,{error:'Plano Pix inválido.'});
+    purchaseGuard(p,planCode);
 
     const token=mpOrdersToken();
     const monthly=planCode==='monthly';

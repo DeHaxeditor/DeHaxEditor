@@ -30,7 +30,7 @@ function requestOrigin(event){
 }
 async function signup(email,password,name,event){
   const anon=env('SUPABASE_ANON_KEY');
-  const redirectTo=`${requestOrigin(event)}/entrar/?confirmed=1`;
+  const redirectTo=`${requestOrigin(event)}/confirmar-email/?next=${encodeURIComponent('/app/')}`;
   const r=await fetch(`${supabaseUrl()}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`,{
     method:'POST',
     headers:{'Content-Type':'application/json',apikey:anon,Authorization:`Bearer ${anon}`},

@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
-import { json,parseBody,requirePaymentProfile,activePro,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail } from './_lib.mjs';
+import { json,parseBody,requirePaymentProfile,errResponse,env,sb,getSetting,mpSubscriptionsToken,mpError,mpCardPayerEmail,purchaseGuard } from './_lib.mjs';
 
 export const handler=async event=>{
   if(event.httpMethod!=='POST')return json(405,{error:'Método não permitido.'});
   try{
     const body=parseBody(event);const {user,p}=await requirePaymentProfile(event,body);
-    if(activePro(p))return json(409,{error:p.access_expires_at?'Seu PRO já está ativo até o período informado na sua conta. Aguarde o término para iniciar o plano mensal.':'Sua assinatura recorrente PRO já está ativa.'});
+    purchaseGuard(p,'monthly');
     const card=body.card||{};
     const token=mpSubscriptionsToken(),plan=env('MP_PLAN_ID');
     const planRes=await fetch(`https://api.mercadopago.com/preapproval_plan/${encodeURIComponent(plan)}`,{headers:{Authorization:`Bearer ${token}`}});

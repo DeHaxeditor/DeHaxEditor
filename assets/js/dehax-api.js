@@ -54,6 +54,25 @@
     return data;
   }
 
+  async function verifyEmailOtp(email,otp){
+    if(!config.supabaseUrl||!config.supabaseAnonKey)throw new Error('Supabase não configurado.');
+    const tokenCode=String(otp||'').replace(/\D/g,'');
+    if(!/^\d{6,8}$/.test(tokenCode))throw new Error('Digite o código recebido no e-mail.');
+    const r=await fetch(`${config.supabaseUrl}/auth/v1/verify`,{method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({email:String(email||'').trim().toLowerCase(),token:tokenCode,type:'email'})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.error||'Código inválido ou expirado.');
+    if(data.access_token)setSession(data);
+    return data;
+  }
+
+  async function resendSignupConfirmation(email){
+    if(!config.supabaseUrl||!config.supabaseAnonKey)throw new Error('Supabase não configurado.');
+    const r=await fetch(`${config.supabaseUrl}/auth/v1/resend`,{method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({type:'signup',email:String(email||'').trim().toLowerCase()})});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(data.message||data.msg||data.error_description||data.error||'Não foi possível reenviar o código.');
+    return data;
+  }
+
   async function signOut(){
     if (demoEnabled && token()==='demo-token') {
       setSession(null); localStorage.removeItem(DEMO_KEY); return;
@@ -152,7 +171,7 @@
     if(accessToken) headers.Authorization=`Bearer ${accessToken}`;
     const r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers,body:JSON.stringify(body)});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error||data.message||`Erro ${r.status}`);
+    if(!r.ok){const e=new Error(data.error||data.message||`Erro ${r.status}`);Object.assign(e,data,{status:r.status});throw e;}
     return data;
   }
 
@@ -171,6 +190,10 @@
   async function createPix(planCode='semester',checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{planCode,checkoutToken})}
   async function paymentStatus(orderId,checkoutToken=''){if(demoEnabled&&!config.supabaseUrl)return {status:'action_required',paid:false};return callFunction('payment-status',{orderId,checkoutToken})}
   async function cancelSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,status:'canceled',accessUntil:null};return callFunction('cancel-subscription',{})}
+  async function audioAiStatus(){if(demoEnabled&&!config.supabaseUrl)return {plan:'pro',admin:false,enabled:false,provider:'elevenlabs',providerConfigured:false,tokens:{allowance:1000,used:120,remaining:880,cycleStart:new Date().toISOString(),cycleEnd:new Date(Date.now()+30*86400000).toISOString()},costs:{narrationPer1000Chars:50,sfxPerSecond:10},limits:{storageDays:30,storageGb:1,maxNarrationChars:5000,maxSfxSeconds:30},storage:{usedBytes:0,maxBytes:1073741824},voices:[],history:[]};return callFunction('ai-audio-status',{})}
+  async function generateAiAudio(payload={}){if(demoEnabled&&!config.supabaseUrl)throw new Error('A geração real de áudio não está ativa no modo demo.');return callFunction('ai-audio-generate',payload)}
+  async function aiAudioFile(id,action='play'){if(demoEnabled&&!config.supabaseUrl)throw new Error('Arquivo indisponível no modo demo.');return callFunction('ai-audio-file',{id,action})}
+
   async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
   async function vodStart(payload){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:'demo-job-'+Date.now(),status:'queued',progress:0};return callFunction('vod-start',payload)}
   async function vodStatus(jobId){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:jobId,status:'done',progress:100,message:'Arquivo pronto no modo de demonstração.',download_url:'#',filename:'dehax-demo.mp4'};return callFunction('vod-status',{jobId})}
@@ -195,5 +218,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,audioAiStatus,generateAiAudio,aiAudioFile,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

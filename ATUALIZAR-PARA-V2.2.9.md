@@ -1,4 +1,4 @@
-# Atualização para DeHax Editor V2.2.9
+# Atualização para DeHax Editor V2.3.0
 
 Esta versão corrige especificamente os testes do **cartão semestral** e do **Pix** via Mercado Pago Orders API.
 
@@ -37,4 +37,4 @@ create-card-payment → MP Orders card rejected
 create-pix          → MP Orders Pix rejected
 ```
 
-Na V2.2.9 esses blocos exibem o conteúdo completo de `errors`.
+Na V2.3.0 esses blocos exibem o conteúdo completo de `errors`.

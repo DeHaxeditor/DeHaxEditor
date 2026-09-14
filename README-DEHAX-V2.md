@@ -1,23 +1,25 @@
-# DeHax Editor — Plataforma de Membros V2.2.9
+# DeHax Editor — Plataforma de Membros V2.3.0
 
-A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
+A V2.3.0 mantém o checkout e os pagamentos validados da V2.2.9 e abre a próxima fase da plataforma: proteção de upgrades, confirmação profissional de e-mail por código e a base completa da IA de áudio.
 
-## Destaques da V2.2.3
+## Destaques da V2.3.0
 
-- categorias e subcategorias podem ser pausadas/reativadas inteiras; assets vinculados somem da biblioteca e o backend bloqueia acesso enquanto estiverem pausadas;
-- exclusão de categoria/subcategoria pode remover todos os assets vinculados em uma única ação;
-- upload em massa cria um asset individual por arquivo usando o nome do arquivo como título;
-- vantagens dos planos FREE, Mensal e Semestral são editáveis pelo Admin;
-- landing PRO usa seletor deslizante Semestral/Mensal, começando no Semestral (R$ 9,90/mês equivalente; R$ 59,40 integral por 6 meses);
-- CTA principal do plano é `QUERO SER PRO` e leva diretamente ao checkout já com o plano selecionado;
-- checkout agora é uma única etapa: novo cliente informa nome, e-mail, confirmação de e-mail, senha e pagamento na mesma tela; a conta só é preparada quando ele clica em pagar;
-- correção do cadastro via Supabase Auth REST: a resposta de signup com confirmação de e-mail ativa pode trazer o usuário diretamente, e não apenas em `data.user`;
-- se o e-mail já existir e o cliente não estiver logado, o checkout detecta a conta, bloqueia nome/confirmação/senha e permite aplicar a compra à conta existente após confirmação explícita do endereço;
-- usuários já logados têm nome/e-mail preenchidos automaticamente e concluem apenas o pagamento;
-- após compra: novo usuário confirma o e-mail e segue para login; usuário logado volta à área de membros; conta existente não logada segue para login;
-- miniaturas de vídeo/imagem continuam visíveis na biblioteca, e previews/downloads respeitam categorias pausadas.
+- **Proteção de recompra PRO:** FREE pode contratar normalmente; PRO Mensal não pode comprar outro Mensal e recebe apenas o upgrade Semestral; PRO Semestral não pode comprar PRO novamente enquanto estiver ativo.
+- **Upgrade Mensal → Semestral:** o pagamento semestral pode ser feito por cartão ou Pix; após aprovação, a recorrência mensal é cancelada e o período mensal já pago é preservado antes de começar os 6 meses.
+- **Confirmação de e-mail por código:** nova página `/confirmar-email/`, validação OTP e reenvio de código. O fluxo foi preparado para Supabase Auth + SMTP profissional.
+- **Guia Resend:** `CONFIGURAR-EMAIL-RESEND.md` e template `docs/SUPABASE-CONFIRMACAO-CODIGO.html` prontos para configurar o envio profissional.
+- **IA de Áudio na área de membros:** interface para Narração (texto → voz) e Efeito Sonoro (texto → SFX), visível para FREE e PRO.
+- **FREE:** pode explorar a IA e ouvir previews de voz quando disponíveis; o botão de gerar abre o upgrade PRO.
+- **PRO:** vê o custo em tokens antes da geração, saldo do ciclo, uso de armazenamento, retenção e biblioteca privada de resultados.
+- **Vozes com preview:** quando o provedor estiver conectado, a lista de vozes mostra botão de reprodução antes da geração.
+- **Controles avançados de narração:** modelo, voz, velocidade, estabilidade e expressividade.
+- **Controles de SFX:** duração, loop e fidelidade ao prompt.
+- **Upload de áudio em standby:** a interface reserva a função futura, mas nesta etapa somente texto pode ser enviado à IA.
+- **Admin → IA de Áudio:** controla ativação, tokens PRO por ciclo, duração do ciclo, custo de narração, custo de SFX, retenção, GB por usuário, limite de caracteres/segundos e quantidade de vozes.
+- **Armazenamento privado no R2:** resultados gerados ficam em `ai-audio/<user>/...` com links temporários; uma Scheduled Function remove arquivos vencidos.
+- **Provedor inicial preparado:** ElevenLabs no backend, com `ELEVENLABS_API_KEY` somente no ambiente do servidor. A geração fica desligada por padrão até o Admin ativá-la.
 
-Para quem já está na V2.2.2, não há migration adicional nesta versão. Consulte `ATUALIZAR-PARA-V2.2.3.md`.
+Para atualizar a partir da V2.2.9, execute `supabase/migration-v2.3.0.sql` e consulte `ATUALIZAR-PARA-V2.3.0.md`.
 
 ## O que mudou nesta versão
 
@@ -56,6 +58,8 @@ Para quem já está na V2.2.2, não há migration adicional nesta versão. Consu
 | Pix mensal e semestral | Mercado Pago Orders API + QR exibido localmente |
 | Backend do site | Netlify Functions |
 | VOD Downloader | Serviço Docker separado com FastAPI + yt-dlp + ffmpeg |
+| IA de áudio | Netlify Functions + ElevenLabs + Cloudflare R2 privado |
+| Confirmação de e-mail | Supabase Auth OTP + SMTP profissional (Resend recomendado) |
 | CRM inicial | Supabase + eventos próprios + Meta Pixel opcional |
 
 ## Por que o VOD usa um serviço separado
@@ -64,9 +68,17 @@ Netlify Functions não são adequadas para downloads/transcodificações longas 
 
 A versão web **não recebe nem envia cookies do navegador do usuário**. Recursos que dependem de sessão autenticada do Chrome/Edge continuam sendo responsabilidade do aplicativo desktop; isso evita enviar cookies sensíveis para o servidor.
 
+## IA de áudio
+
+A V2.3.0 adiciona um módulo de IA de áudio com backend isolado. A interface usa tokens internos DeHax e o provedor inicial é ElevenLabs. Narrações e efeitos são gerados no backend, enviados ao R2 privado e entregues ao membro por URLs temporárias. O upload de áudio do usuário está desativado nesta etapa.
+
+## E-mail por código
+
+A confirmação profissional usa Supabase Auth. O SMTP é configurado diretamente no Supabase (recomendação inicial: Resend), e o e-mail exibe `{{ .Token }}` para o usuário digitar em `/confirmar-email/`.
+
 ---
 
-# 1. Testar a V2.2.3 localmente
+# 1. Testar a V2.3.0 localmente
 
 No Windows, extraia o ZIP e dê dois cliques em:
 
@@ -89,7 +101,7 @@ Na demo, pagamentos, uploads, downloads reais e o processamento VOD dependente d
 # 2. Supabase
 
 1. Se for uma instalação nova, crie o projeto, abra o **SQL Editor** e execute `supabase/schema.sql` inteiro.
-2. Se você já está na V2.2.1 com Supabase funcionando, não repita o schema: execute **somente** `supabase/migration-v2.2.2.sql`. Se veio da V2.2, execute primeiro `migration-v2.2.1.sql` e depois `migration-v2.2.2.sql`.
+2. Se você já está na V2.2.9 com Supabase funcionando, não repita o schema: execute **somente** `supabase/migration-v2.3.0.sql`. Em instalações mais antigas, aplique primeiro as migrations V2.2.1 e V2.2.2 que ainda estiverem pendentes.
 3. Em Authentication, mantenha login por e-mail/senha configurado.
 4. Cadastre sua conta em `/entrar/`.
 5. Promova sua conta a admin:
@@ -165,17 +177,18 @@ R2_MEDIA_PUBLIC_URL=
 
 ---
 
-# 4. Mercado Pago — V2.2.3
+# 4. Mercado Pago — fluxo validado na V2.2.9
 
 ## Antes de testar
 
-No projeto Supabase existente, mantenha a migration V2.2.1 aplicada e execute também `supabase/migration-v2.2.2.sql`. A nova migration cria a sessão temporária de checkout para contas recém-cadastradas e as listas editáveis de vantagens dos planos.
+No projeto Supabase existente, mantenha as migrations V2.2.1 e V2.2.2 aplicadas. A V2.3.0 acrescenta somente `supabase/migration-v2.3.0.sql`, relacionada à IA de áudio.
 
 ## Variáveis Netlify
 
 ```text
 MP_PUBLIC_KEY=
 MP_SUBSCRIPTIONS_ACCESS_TOKEN=
+MP_ORDERS_PUBLIC_KEY=
 MP_ORDERS_ACCESS_TOKEN=
 MP_PLAN_ID=
 MP_TEST_MODE=true
@@ -186,8 +199,9 @@ MP_ORDERS_WEBHOOK_SECRET=
 ```
 
 - `MP_PUBLIC_KEY` é pública e é usada pelo MercadoPago.js no navegador. Use a Public Key da aplicação usada para cartão/assinaturas.
-- `MP_SUBSCRIPTIONS_ACCESS_TOKEN` é secreto e é usado pelo backend para assinatura mensal e pagamento único semestral em cartão.
-- `MP_ORDERS_ACCESS_TOKEN` é secreto e é usado somente para Orders/Pix.
+- `MP_SUBSCRIPTIONS_ACCESS_TOKEN` é secreto e é usado pelo backend para a assinatura mensal recorrente.
+- `MP_ORDERS_PUBLIC_KEY` tokeniza o cartão do plano semestral no ambiente Orders.
+- `MP_ORDERS_ACCESS_TOKEN` é secreto e é usado pelo backend para cartão semestral e Pix via Orders API.
 - `MP_PLAN_ID` é o ID do plano mensal recorrente de R$ 19,90 já criado no Mercado Pago.
 - `MP_ACCESS_TOKEN` continua aceito como fallback legado, mas as variáveis separadas acima têm prioridade.
 - Em `MP_TEST_MODE=true`, use `MP_TEST_SUBSCRIPTION_PAYER_EMAIL` com o e-mail da conta de teste compradora do Mercado Pago e deixe `MP_TEST_PIX_PAYER_EMAIL=test_user_br@testuser.com`. Em produção, use `MP_TEST_MODE=false`.
@@ -467,6 +481,7 @@ DOWNLOAD_DAILY_LIMIT=1000
 
 MP_PUBLIC_KEY=
 MP_SUBSCRIPTIONS_ACCESS_TOKEN=
+MP_ORDERS_PUBLIC_KEY=
 MP_ORDERS_ACCESS_TOKEN=
 MP_PLAN_ID=
 MP_TEST_MODE=true
@@ -558,23 +573,23 @@ Antes de disponibilizar músicas, memes, trechos de filmes/séries, SFX ou outro
 - Aviso de renovação dentro da área de membros com antecedência configurável (`renewal_notice_days`, padrão 7).
 - A renovação automática via Pix não está habilitada neste checkout customizado; o cartão mensal continua recorrente automaticamente.
 
-## V2.2.9 — correção de homologação do checkout
+## V2.3.0 — correção de homologação do checkout
 
-A V2.2.9 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
+A V2.3.0 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
 
 
-## V2.2.9 — correção de sessão do checkout convidado
+## V2.3.0 — correção de sessão do checkout convidado
 
-A V2.2.9 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
+A V2.3.0 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
 
 Não requer migration nem novas variáveis de ambiente.
 
-## V2.2.9 — payload mínimo de assinatura e diagnóstico seguro
+## V2.3.0 — payload mínimo de assinatura e diagnóstico seguro
 
-A V2.2.9 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
+A V2.3.0 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
 
 
-## V2.2.9 — credenciais separadas para Assinaturas e Orders
+## V2.3.0 — credenciais separadas para Assinaturas e Orders
 
 A assinatura mensal e os pagamentos avulsos usam fluxos de teste diferentes no Mercado Pago.
 
@@ -586,7 +601,7 @@ A assinatura mensal e os pagamentos avulsos usam fluxos de teste diferentes no M
 
 Não reutilize o token de Assinaturas como `MP_ORDERS_ACCESS_TOKEN`. Em teste, isso resulta em erros como `Unauthorized use of live credentials`.
 
-## V2.2.9 — correção Orders sandbox
+## V2.3.0 — correção Orders sandbox
 
 - Corrige `external_reference` das Orders para <= 64 caracteres e somente caracteres permitidos.
 - Em `MP_TEST_MODE=true`, cartão semestral e Pix usam R$ 50,00 exclusivamente no sandbox da Orders API; valores comerciais permanecem inalterados na DeHax e voltam a ser enviados quando o modo de teste for desligado.

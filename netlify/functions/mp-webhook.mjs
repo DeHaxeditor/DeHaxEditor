@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { json,parseBody,sb,errResponse,mpSubscriptionsToken,mpOrdersToken,grantFixedProForOrder } from './_lib.mjs';
+import { json,parseBody,sb,errResponse,mpSubscriptionsToken,mpOrdersToken,grantFixedProForOrder,cancelRecurringForSemesterUpgrade,profile } from './_lib.mjs';
 
 function queryParams(event){
   if(event.queryStringParameters)return new URLSearchParams(Object.entries(event.queryStringParameters).filter(([,v])=>v!=null));
@@ -32,7 +32,7 @@ async function handleOrder(id){
   const r=await fetch(`https://api.mercadopago.com/v1/orders/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${mpOrdersToken()}`}});if(!r.ok)return {ignored:'order-not-found'};
   const order=await r.json();const {data:rows}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&select=*`);const local=(rows||[]).find(x=>x.kind==='pix'||x.kind==='card_once');if(!local)return {ignored:'unknown-order'};
   const paid=String(order.status)==='processed'||order.transactions?.payments?.some(p=>String(p.status)==='processed'&&(!p.status_detail||String(p.status_detail)==='accredited'));
-  if(paid&&['monthly','semester'].includes(String(local.plan_code||'')))await grantFixedProForOrder(local.id);
+  if(paid&&['monthly','semester'].includes(String(local.plan_code||''))){if(local.plan_code==='semester'){const current=await profile(local.user_id);await cancelRecurringForSemesterUpgrade(local.user_id,current||{});}await grantFixedProForOrder(local.id);}
   await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(order.status||'pending'),raw:order}});return {status:order.status,paid};
 }
 async function handlePayment(id){

@@ -1,4 +1,4 @@
-# DeHax Editor — atualização V2.2.9
+# DeHax Editor — atualização V2.3.0
 
 Esta versão corrige o fluxo do Card Payment Brick durante os testes.
 
@@ -13,6 +13,6 @@ Esta versão corrige o fluxo do Card Payment Brick durante os testes.
 
 ## Atualização
 
-Substitua a V2.2.4 pela V2.2.9 na branch `teste` e faça um Branch Deploy.
+Substitua a V2.2.4 pela V2.3.0 na branch `teste` e faça um Branch Deploy.
 
 Não execute SQL adicional.

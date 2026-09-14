@@ -12,3 +12,6 @@ body{overflow-x:hidden}.admin-shell{display:grid;grid-template-columns:260px 1fr
 
 /* V2.2.2 — categorias em lote */
 .category-admin-card.category-paused{opacity:.72;border-color:rgba(255,177,90,.2);background:linear-gradient(155deg,rgba(255,177,90,.025),#080d13)}.danger-tiny{color:#ff9daf;border-color:rgba(255,41,77,.22)!important}.danger-tiny:hover{background:rgba(255,41,77,.1)!important;border-color:rgba(255,41,77,.5)!important}.sub-item small{display:inline-block;margin-left:5px;color:#566573;font-size:8px}.sub-item.paused{opacity:.58;border-style:dashed}.category-actions{align-items:center;flex-wrap:wrap;justify-content:flex-end}.category-admin-card header>div:first-child{min-width:0}
+
+/* V2.3.0 — IA de áudio */
+.ai-admin-metrics{margin-bottom:0}.ai-admin-standby{border-style:dashed;opacity:.85}.ai-admin-standby .pill{display:inline-flex;margin-bottom:8px}.ai-admin-standby h3{margin-top:4px}.ai-admin-standby p{max-width:760px}

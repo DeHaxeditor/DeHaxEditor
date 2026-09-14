@@ -20,6 +20,13 @@
   const recurringActive=()=>!!profile?.subscription_id&&['authorized','active','trialing'].includes(String(profile?.subscription_status||'').toLowerCase());
   const activeUntil=()=>profile?.access_expires_at&&new Date(profile.access_expires_at).getTime()>Date.now()?new Date(profile.access_expires_at):null;
   const accepted=()=>{if($('#legalAccept').checked)return true;toast('Confirme a leitura dos termos antes de continuar.','error');return false};
+  const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+  async function softTimeout(promise,ms,fallback){
+    let timed=false;
+    const timer=wait(ms).then(()=>{timed=true;return fallback});
+    const result=await Promise.race([Promise.resolve(promise).catch(()=>fallback),timer]);
+    return {result,timed};
+  }
 
   function trackPurchase(method,key=''){
     const amount=selectedAmount(),k=`dehax_purchase_track_${method}_${key||'latest'}`;
@@ -277,13 +284,21 @@
 
   async function init(){
     try{
-      await loadSettings();currentUser=await DehaxAPI.currentUser();
-      if(currentUser){profile=await DehaxAPI.currentProfile();clearGuestSession()}else restoreGuestSession();
+      // Settings improve the checkout, but must never block the page forever.
+      await softTimeout(loadSettings(),6000,null);
+      const userState=await softTimeout(DehaxAPI.currentUser(),6000,null);currentUser=userState.result;
+      if(currentUser){
+        const profileState=await softTimeout(DehaxAPI.currentProfile(),6000,null);profile=profileState.result;clearGuestSession();
+      }else restoreGuestSession();
       renderIdentity();renderSettings();renderPaymentMethod();
       if(!currentUser&&!checkoutToken)resetGuestProbe();
       if(currentUser||checkoutToken)ensureCardBrick();
       $('#checkoutLoading').hidden=true;$('#checkoutContent').hidden=false;
-    }catch(e){$('#checkoutLoading').textContent=e.message||'Não foi possível preparar o checkout.'}
+    }catch(e){
+      console.error('Checkout init',e);
+      // Fail visibly instead of leaving the customer trapped on “Preparando checkout...”.
+      $('#checkoutLoading').textContent=e?.message||'Não foi possível preparar o checkout.';
+    }
   }
   init();
 })();

@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.2.8
+# DeHax Editor — Plataforma de Membros V2.2.9
 
 A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
 
@@ -558,23 +558,23 @@ Antes de disponibilizar músicas, memes, trechos de filmes/séries, SFX ou outro
 - Aviso de renovação dentro da área de membros com antecedência configurável (`renewal_notice_days`, padrão 7).
 - A renovação automática via Pix não está habilitada neste checkout customizado; o cartão mensal continua recorrente automaticamente.
 
-## V2.2.8 — correção de homologação do checkout
+## V2.2.9 — correção de homologação do checkout
 
-A V2.2.8 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
+A V2.2.9 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
 
 
-## V2.2.8 — correção de sessão do checkout convidado
+## V2.2.9 — correção de sessão do checkout convidado
 
-A V2.2.8 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
+A V2.2.9 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
 
 Não requer migration nem novas variáveis de ambiente.
 
-## V2.2.8 — payload mínimo de assinatura e diagnóstico seguro
+## V2.2.9 — payload mínimo de assinatura e diagnóstico seguro
 
-A V2.2.8 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
+A V2.2.9 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
 
 
-## V2.2.8 — credenciais separadas para Assinaturas e Orders
+## V2.2.9 — credenciais separadas para Assinaturas e Orders
 
 A assinatura mensal e os pagamentos avulsos usam fluxos de teste diferentes no Mercado Pago.
 
@@ -585,3 +585,10 @@ A assinatura mensal e os pagamentos avulsos usam fluxos de teste diferentes no M
 - Em teste, o cartão avulso usa `test@testuser.com` e o Pix usa `test_user_br@testuser.com`, conforme os cenários oficiais da Orders API.
 
 Não reutilize o token de Assinaturas como `MP_ORDERS_ACCESS_TOKEN`. Em teste, isso resulta em erros como `Unauthorized use of live credentials`.
+
+## V2.2.9 — correção Orders sandbox
+
+- Corrige `external_reference` das Orders para <= 64 caracteres e somente caracteres permitidos.
+- Em `MP_TEST_MODE=true`, cartão semestral e Pix usam R$ 50,00 exclusivamente no sandbox da Orders API; valores comerciais permanecem inalterados na DeHax e voltam a ser enviados quando o modo de teste for desligado.
+- Sandbox de cartão/Pix usa payload mínimo compatível com os exemplos oficiais.
+- Logs do Mercado Pago agora expandem completamente o array `errors`.

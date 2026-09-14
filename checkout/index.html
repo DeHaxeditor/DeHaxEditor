@@ -9,20 +9,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/platform.css?v=2.2.8">
-  <link rel="stylesheet" href="/assets/css/checkout.css?v=2.2.8">
-  <script src="/assets/js/runtime-config.js?v=2.2.8"></script>
+  <link rel="stylesheet" href="/assets/css/platform.css?v=2.2.9">
+  <link rel="stylesheet" href="/assets/css/checkout.css?v=2.2.9">
+  <script src="/assets/js/runtime-config.js?v=2.2.9"></script>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
-  <script defer src="/assets/js/dehax-api.js?v=2.2.8"></script>
-  <script defer src="/assets/js/site-settings.js?v=2.2.8"></script>
-  <script defer src="/assets/js/ui.js?v=2.2.8"></script>
-  <script defer src="/assets/js/tracking.js?v=2.2.8"></script>
-  <script defer src="/assets/js/checkout.js?v=2.2.8"></script>
+  <script defer src="/assets/js/dehax-api.js?v=2.2.9"></script>
+  <script defer src="/assets/js/site-settings.js?v=2.2.9"></script>
+  <script defer src="/assets/js/ui.js?v=2.2.9"></script>
+  <script defer src="/assets/js/tracking.js?v=2.2.9"></script>
+  <script defer src="/assets/js/checkout.js?v=2.2.9"></script>
 </head>
 <body>
   <div class="noise"></div><div class="grid"></div>
   <header class="checkout-head">
-    <a class="logo-lockup" href="/"><img src="/assets/brand/dehax-logo.png?v=2.2.8" alt="DeHax"><span>DeHax <em>PRO</em></span></a>
+    <a class="logo-lockup" href="/"><img src="/assets/brand/dehax-logo.png?v=2.2.9" alt="DeHax"><span>DeHax <em>PRO</em></span></a>
     <a class="btn ghost" href="/comunidade/">VOLTAR</a>
   </header>
 
@@ -94,6 +94,7 @@
             <div id="cardWaiting" class="brick-waiting">Informe um e-mail válido acima para carregar o formulário seguro do cartão.</div>
             <div id="cardBrickLoading" class="brick-loading" hidden>Carregando formulário seguro...</div>
             <div id="cardBrickError" class="brick-error" hidden></div>
+            <div class="test-hint" id="cardTestHint" hidden>Ambiente de teste: o sandbox da Orders API usa R$ 50,00 para validar o cartão semestral. Em produção será cobrado R$ 59,40.</div>
             <div id="cardPaymentBrick_container"></div>
           </div>
 

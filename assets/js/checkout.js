@@ -16,6 +16,7 @@
   const semesterMonthly=()=>num(settings.pro_semester_monthly_equiv||'9.90')||9.9;
   const pixDays=()=>Math.max(1,Math.round(num(settings.pix_access_days||30)||30));
   const selectedAmount=()=>selectedPlan==='monthly'?monthlyPrice():semesterTotal();
+  const selectedCardProviderAmount=()=>selectedPlan==='semester'&&DehaxAPI.config.mpTestMode?50:selectedAmount();
   const selectedCardPublicKey=()=>selectedPlan==='monthly'?(DehaxAPI.config.mpSubscriptionsPublicKey||DehaxAPI.config.mpPublicKey||''):(DehaxAPI.config.mpOrdersPublicKey||'');
   const payerEmail=()=>String(currentUser?.email||checkoutIdentity?.email||$('#checkoutEmail')?.value||'').trim().toLowerCase();
   const recurringActive=()=>!!profile?.subscription_id&&['authorized','active','trialing'].includes(String(profile?.subscription_status||'').toLowerCase());
@@ -121,6 +122,7 @@
     $('#cardMethodText').textContent=sem?'Pagamento único · 1x sem parcelamento':'Assinatura mensal recorrente';
     $('#pixMethodText').textContent=sem?'Pagamento único · 6 meses':`Pagamento avulso · ${pixDays()} dias`;
     $('#cardBoxDescription').textContent=sem?`Pagamento único de R$ ${money(semesterTotal())}, em 1x. Acesso PRO por 6 meses.`:`R$ ${money(monthlyPrice())}/mês em cobrança recorrente. Você pode cancelar quando quiser; o período já pago é preservado.`;
+    const cardTestHint=$('#cardTestHint');if(cardTestHint)cardTestHint.hidden=!(sem&&DehaxAPI.config.mpTestMode);
     $('#planSummary').innerHTML=sem?`<b>SEMESTRAL:</b> pagamento integral de <strong>R$ ${money(semesterTotal())}</strong> e 6 meses de PRO, sem renovação automática.`:`<b>MENSAL:</b> cartão em <strong>R$ ${money(monthlyPrice())}/mês</strong> com renovação automática, ou Pix avulso de <strong>R$ ${money(monthlyPrice())}</strong> por ${pixDays()} dias.`;
     const until=activeUntil(),carry=$('#renewalCarry');
     if(until&&!recurringActive()){const dt=new Intl.DateTimeFormat('pt-BR').format(until);carry.hidden=false;carry.innerHTML=`<b>RENOVAÇÃO ANTECIPADA:</b> seu acesso atual vai até <strong>${dt}</strong>. No pagamento avulso, o novo período começa depois dessa data — você não perde nenhum dia.`}else carry.hidden=true;
@@ -206,7 +208,7 @@
           bricksBuilder=mp.bricks();
           brickBuilderPublicKey=publicKey;
         }
-        const amount=selectedAmount();
+        const amount=selectedCardProviderAmount();
         const controller=await bricksBuilder.create('cardPayment','cardPaymentBrick_container',{
           initialization:{amount,payer:{email:brickPayerEmail}},
           customization:{paymentMethods:{types:{excluded:['debit_card','prepaid_card']},minInstallments:1,maxInstallments:1},visual:{hidePaymentButton:true,style:{theme:'dark',customVariables:{baseColor:'#ff294d',buttonTextColor:'#ffffff',formBackgroundColor:'#080d13',inputBackgroundColor:'#0b1118',textPrimaryColor:'#f4f7fb',textSecondaryColor:'#7f8b98',outlinePrimaryColor:'#24313d',borderRadiusMedium:'12px'}}}},
@@ -298,7 +300,7 @@
     orderPlan=selectedPlan;const d=await DehaxAPI.createPix(selectedPlan,checkoutToken);orderId=String(d.orderId||'');
     $('#pixBefore').hidden=true;$('#pixGenerated').hidden=false;$('#pixCode').value=d.qrCode||'';
     if(d.qrCodeBase64)$('#qrShell').innerHTML=`<img src="data:image/png;base64,${String(d.qrCodeBase64).replace(/^data:image\/\w+;base64,/, '')}" alt="QR Code Pix">`;else $('#qrShell').innerHTML='<div class="qr-demo">PIX</div>';
-    $('#pixState').textContent=d.testMode?'Pix sandbox gerado':'Escaneie o QR ou use o Copia e Cola';$('#pixTestHint').hidden=!d.testMode;
+    $('#pixState').textContent=d.testMode?'Pix sandbox gerado':'Escaneie o QR ou use o Copia e Cola';$('#pixTestHint').hidden=!d.testMode;if(d.testMode)$('#pixTestHint').textContent='Ambiente de teste: o sandbox do Mercado Pago usa R$ 50,00 para validar o Pix. Em produção será cobrado o valor real do plano.';
     clearInterval(poll);poll=setInterval(checkPayment,3000);
     window.DehaxTracking?.send('checkout_method',{method:'pix',plan:selectedPlan});window.DehaxTracking?.meta?.('InitiateCheckout',{value:selectedAmount(),currency:'BRL',content_name:`DeHax PRO ${selectedPlan}`,payment_method:'pix'});
     const until=activeUntil();if(until){$('#checkoutStatus').className='checkout-status warn';$('#checkoutStatus').textContent=`Renovação antecipada: o novo período começa depois de ${new Intl.DateTimeFormat('pt-BR').format(until)}. Você não perde nenhum dia.`}

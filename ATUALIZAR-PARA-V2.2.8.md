@@ -1,4 +1,4 @@
-# Atualizar para DeHax V2.2.8
+# Atualizar para DeHax V2.2.9
 
 Não há migration SQL nova.
 

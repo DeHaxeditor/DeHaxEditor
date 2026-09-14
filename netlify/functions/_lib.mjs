@@ -72,8 +72,20 @@ export function mpOrdersToken(){const token=env('MP_ORDERS_ACCESS_TOKEN',false);
 export function mpDebug(){return String(process.env.MP_TEST_MODE||'').toLowerCase()==='true'}
 export function mpCardPayerEmail(fallback=''){return mpDebug()?(process.env.MP_TEST_SUBSCRIPTION_PAYER_EMAIL||fallback):fallback}
 export function mpError(data,fallback='O Mercado Pago recusou a operação.',status=502){
-  const cause=Array.isArray(data?.cause)?data.cause.map(x=>x?.description||x?.code).filter(Boolean).join(' · '):'';
-  const msg=String(data?.message||data?.error||cause||fallback).slice(0,500);
+  const parts=[];
+  const add=v=>{if(v!==undefined&&v!==null&&String(v).trim())parts.push(String(v).trim())};
+  add(data?.message);add(data?.error);
+  if(Array.isArray(data?.cause))for(const x of data.cause||[]){add(x?.code);add(x?.description);add(x?.message)}
+  if(Array.isArray(data?.errors))for(const x of data.errors||[]){
+    add(x?.code);add(x?.message);add(x?.description);
+    const details=Array.isArray(x?.details)?x.details:(x?.details?[x.details]:[]);
+    for(const d of details){
+      const where=d?.field||d?.path||d?.property||d?.name||'';
+      const text=d?.message||d?.description||d?.detail||d?.error||'';
+      if(where&&text)add(`${where}: ${text}`);else{add(where);add(text)}
+    }
+  }
+  const msg=String([...new Set(parts)].join(' · ')||fallback).slice(0,800);
   const e=new Error(msg);e.status=status;e.expose=true;e.provider='mercadopago';e.providerData=mpDebug()?data:undefined;return e;
 }
 export function addCalendarMonths(base,months){

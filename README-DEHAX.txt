@@ -1,16 +1,17 @@
-DEHAX EDITOR — PLATAFORMA V2.2
-============================
+DEHAX EDITOR PLATFORM V2.2.1
 
-O projeto agora possui área de membros, landing page, Admin Control Center,
-Supabase, Cloudflare R2, YouTube não listado e integração com Mercado Pago.
+Base: Netlify + Supabase + Cloudflare R2 + YouTube não listado + Mercado Pago.
 
-LEIA PRIMEIRO:
-README-DEHAX-V2.md
+ATUALIZAÇÃO IMPORTANTE
+1. Em projeto já configurado, execute supabase/migration-v2.2.1.sql no SQL Editor.
+2. Configure as novas variáveis Mercado Pago descritas em README-DEHAX-V2.md.
+3. Mensal: R$ 19,90/mês recorrente via Card Payment Brick + Assinaturas.
+4. Semestral: R$ 59,40 à vista (equiv. R$ 9,90/mês), cartão 1x ou Pix, acesso por 6 meses.
+5. Cartão é tokenizado pelo Mercado Pago. A DeHax não armazena PAN, validade ou CVV.
+6. Pix usa token separado da Orders API.
+7. Webhook suporta assinatura, payment e order, com validação x-signature quando os segredos estão configurados.
+8. Miniaturas de vídeos/imagens aparecem na biblioteca.
 
-Rotas principais:
-- /                 Portfólio
-- /comunidade/      Landing page para anúncios
-- /entrar/          Login / cadastro
-- /app/             Área de membros
-- /admin/           Painel administrativo completo
-- /cms/             Painel antigo do portfólio
+Veja README-DEHAX-V2.md e CONFIGURAR-AMANHA.md para configuração completa.
+
+PIX MENSAL: disponível como pagamento avulso. Renovação antecipada soma o novo período ao final do acesso atual, sem perda de dias. Aviso de vencimento configurável no Admin.

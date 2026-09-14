@@ -1,4 +1,4 @@
-# DeHax V2.2 — Checklist de configuração
+# DeHax V2.2.1 — Checklist de configuração
 
 Use este arquivo amanhã como ordem de trabalho. O código já está preparado; aqui entram apenas contas, chaves, conteúdo e testes reais.
 
@@ -55,7 +55,8 @@ Em **Comunidade & marca**:
 - 3 vídeos “Assets na prática”;
 - Discord/WhatsApp;
 - preço;
-- dias do Pix;
+- preço mensal (R$ 19,90);
+- preço semestral equivalente (R$ 9,90/mês) e total à vista (R$ 59,40);
 - Meta Pixel;
 - dados comerciais/suporte.
 
@@ -66,15 +67,42 @@ Em **Categorias**:
 
 Depois cadastrar assets e tutoriais reais.
 
-## 4. Mercado Pago
+## 4. Mercado Pago — checkout corrigido
 
-- Criar aplicação de produção.
-- Criar plano de assinatura recorrente.
-- Copiar `MP_ACCESS_TOKEN` e `MP_PLAN_ID`.
-- Configurar webhook em `https://SEU-DOMINIO/.netlify/functions/mp-webhook`.
-- Testar cartão: deve abrir checkout do Mercado Pago, retornar e liberar PRO.
-- Testar Pix: QR deve aparecer na DeHax, confirmar e liberar PRO.
-- Testar “Cancelar recorrência” em Minha Conta.
+Antes do deploy da V2.2.1:
+
+- executar `supabase/migration-v2.2.1.sql`;
+- manter o plano mensal `DeHax PRO` no Mercado Pago em R$ 19,90/mês;
+- pegar a **Public Key** da aplicação de cartão/assinaturas;
+- usar token de cartão/assinaturas separado do token Orders/Pix;
+- no ambiente de teste, usar uma conta compradora de teste do Mercado Pago para cartão.
+
+Netlify:
+
+```text
+MP_PUBLIC_KEY=
+MP_SUBSCRIPTIONS_ACCESS_TOKEN=
+MP_ORDERS_ACCESS_TOKEN=
+MP_PLAN_ID=
+MP_TEST_MODE=true
+MP_TEST_SUBSCRIPTION_PAYER_EMAIL=EMAIL_TESTE_COMPRADOR
+MP_TEST_PIX_PAYER_EMAIL=test_user_br@testuser.com
+MP_SUBSCRIPTIONS_WEBHOOK_SECRET=
+MP_ORDERS_WEBHOOK_SECRET=
+```
+
+Webhooks em `https://SEU-DOMINIO/.netlify/functions/mp-webhook`:
+
+- cartão/assinaturas: `subscription_preapproval` e `payment`;
+- Orders/Pix: `order`.
+
+Testar:
+
+- mensal R$ 19,90/mês: Card Payment Brick dentro da DeHax → assinatura recorrente autorizada → PRO;
+- cancelamento mensal: para novas cobranças, preservando o acesso até o fim do período já pago;
+- semestral cartão: R$ 59,40 em 1x → 6 meses de PRO;
+- semestral Pix: R$ 59,40 → Order/QR → 6 meses de PRO após confirmação;
+- confirmar que número completo do cartão, validade e CVV não aparecem no Supabase/logs da DeHax.
 
 ## 5. VOD Downloader
 
@@ -120,8 +148,9 @@ Testar YouTube, Twitch e Kick com conteúdo autorizado.
 Testar em desktop e celular:
 
 - FREE;
-- PRO cartão;
-- PRO Pix;
+- PRO mensal recorrente no cartão;
+- PRO semestral em cartão 1x;
+- PRO semestral em Pix;
 - tutorial com liberação programada;
 - download de asset;
 - pausa individual/global;

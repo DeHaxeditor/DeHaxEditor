@@ -3,6 +3,8 @@ window.DEHAX_CONFIG = {
   "supabaseAnonKey": "",
   "siteUrl": "",
   "checkoutFallbackUrl": "",
+  "mpPublicKey": "",
+  "mpTestMode": false,
   "metaPixelId": "",
   "demoMode": false
 };

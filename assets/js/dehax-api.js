@@ -39,7 +39,7 @@
     }
     const r = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=password`, {method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({email,password})});
     const data = await r.json();
-    if(!r.ok) throw new Error(data.msg || data.error_description || data.error || 'Não foi possível entrar.');
+    if(!r.ok) throw new Error(data.message || data.msg || data.error_description || data.error || 'Não foi possível entrar.');
     setSession(data);
     return data;
   }
@@ -49,7 +49,7 @@
     if (demoEnabled && !config.supabaseUrl) return signIn(email,password);
     const r = await fetch(`${config.supabaseUrl}/auth/v1/signup`, {method:'POST',headers:{...jsonHeaders,apikey:config.supabaseAnonKey},body:JSON.stringify({email,password,data:{display_name:name||''}})});
     const data = await r.json();
-    if(!r.ok) throw new Error(data.msg || data.error_description || data.error || 'Não foi possível criar a conta.');
+    if(!r.ok) throw new Error(data.message || data.msg || data.error_description || data.error || 'Não foi possível criar a conta.');
     if(data.access_token) setSession(data);
     return data;
   }
@@ -158,8 +158,9 @@
     if (demoEnabled && !config.supabaseUrl) return {demo:true,tutorialId};
     return callFunction('tutorial-access',{tutorialId});
   }
-  async function createSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true};return callFunction('create-subscription',{})}
-  async function createPix(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{})}
+  async function createSubscription(card){if(demoEnabled&&!config.supabaseUrl)return {demo:true,authorized:true,status:'authorized',subscriptionId:'demo-sub'};return callFunction('create-subscription',{card})}
+  async function createCardPayment(card,planCode='semester'){if(demoEnabled&&!config.supabaseUrl)return {demo:true,paid:true,status:'approved',paymentId:'demo-card',accessExpiresAt:new Date(Date.now()+183*86400000).toISOString()};return callFunction('create-card-payment',{card,planCode})}
+  async function createPix(planCode='semester'){if(demoEnabled&&!config.supabaseUrl)return {demo:true,orderId:'demo-pix',status:'action_required',qrCode:'00020126580014BR.GOV.BCB.PIX0136DEHAX-DEMO-PIX-NAO-PAGAR',qrCodeBase64:''};return callFunction('create-pix',{planCode})}
   async function paymentStatus(orderId){if(demoEnabled&&!config.supabaseUrl)return {status:'action_required',paid:false};return callFunction('payment-status',{orderId})}
   async function cancelSubscription(){if(demoEnabled&&!config.supabaseUrl)return {demo:true,status:'canceled',accessUntil:null};return callFunction('cancel-subscription',{})}
   async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
@@ -186,5 +187,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createSubscription,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

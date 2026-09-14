@@ -1,6 +1,6 @@
-# DeHax Editor — Plataforma de Membros V2.2.
+# DeHax Editor — Plataforma de Membros V2.2.1
 
-A V2.2 mantém a identidade visual aprovada da DeHax e amplia a plataforma para funcionar como um ecossistema completo de aquisição, membros, biblioteca, tutoriais, VOD Downloader, checkout e administração.
+A V2.2.1 mantém a identidade visual aprovada da DeHax e amplia a plataforma para funcionar como um ecossistema completo de aquisição, membros, biblioteca, tutoriais, VOD Downloader, checkout e administração.
 
 ## O que mudou nesta versão
 
@@ -14,9 +14,11 @@ A V2.2 mantém a identidade visual aprovada da DeHax e amplia a plataforma para 
 - **Correção mobile** para evitar rolagem lateral involuntária e manter o conteúdo centralizado.
 - **Landing `/comunidade/`** com seção “Assets na prática” e três vídeos antes dos planos, seguida de CTA.
 - **Botões unificados** com o efeito vermelho/ciano usado na página principal.
-- **Checkout `/checkout/`**: cartão via página hospedada do Mercado Pago; Pix gerado e exibido dentro da DeHax sem coletar dados bancários/cartão no site.
-- **Acesso Pix automático** após confirmação do pagamento e retorno para a área de membros.
-- **Assinatura recorrente no cartão** via Mercado Pago Assinaturas, com cancelamento da recorrência pela área Minha Conta.
+- **Checkout `/checkout/` dentro da DeHax** usando o Card Payment Brick oficial do Mercado Pago. O cartão é tokenizado pelo SDK do Mercado Pago; PAN, validade e CVV não são enviados ao backend nem armazenados pela DeHax.
+- **Dois planos PRO**: mensal recorrente por R$ 19,90/mês e semestral pré-pago por R$ 59,40 (equivalente a R$ 9,90/mês), sem parcelamento e sem renovação automática.
+- **Pix semestral** via Mercado Pago Orders API, com QR/Copia e Cola exibidos dentro da DeHax.
+- **Cancelamento mensal** interrompe renovações futuras sem multa e preserva o acesso até o fim do ciclo já pago.
+- **Miniaturas visíveis na biblioteca** para assets de vídeo e imagem, tanto em cards quanto na listagem.
 - **Tutorial com liberação programada**: cada tutorial pode ter `0, 7, 14...` dias de espera a partir da primeira ativação PRO. O exemplo inicial usa 7 dias e é apresentado como bônus com liberação programada; isso não altera direitos legais de arrependimento/cancelamento.
 - `/privacidade/`, `/termos/` e `/cookies/` atualizados como base operacional.
 - Limite de segurança inicial aumentado para **1.000 downloads por 24h**, alterável no Admin.
@@ -32,8 +34,9 @@ A V2.2 mantém a identidade visual aprovada da DeHax e amplia a plataforma para 
 | Assets privados | Cloudflare R2 privado |
 | Logo, capas e imagens públicas | Cloudflare R2 Media público separado |
 | Tutoriais | YouTube não listado |
-| Cartão recorrente | Mercado Pago Assinaturas / checkout hospedado |
-| Pix | Mercado Pago Orders API + QR exibido localmente |
+| Cartão mensal recorrente | Mercado Pago Card Payment Brick + Assinaturas |
+| Cartão semestral | Mercado Pago Card Payment Brick + pagamento único em 1x |
+| Pix semestral | Mercado Pago Orders API + QR exibido localmente |
 | Backend do site | Netlify Functions |
 | VOD Downloader | Serviço Docker separado com FastAPI + yt-dlp + ffmpeg |
 | CRM inicial | Supabase + eventos próprios + Meta Pixel opcional |
@@ -46,7 +49,7 @@ A versão web **não recebe nem envia cookies do navegador do usuário**. Recurs
 
 ---
 
-# 1. Testar a V2.2 localmente
+# 1. Testar a V2.2.1 localmente
 
 No Windows, extraia o ZIP e dê dois cliques em:
 
@@ -68,13 +71,11 @@ Na demo, pagamentos, uploads, downloads reais e o processamento VOD dependente d
 
 # 2. Supabase
 
-1. Crie um projeto no Supabase.
-2. Abra **SQL Editor**.
-3. Execute `supabase/schema.sql` inteiro.
-4. Se você já tinha executado a V2.1, o final do arquivo contém a migração da V2.2 e pode ser executado novamente; revise mensagens de conflito antes de publicar em produção.
-5. Em Authentication, configure login por e-mail/senha.
-6. Cadastre sua conta em `/entrar/`.
-7. Promova sua conta a admin:
+1. Se for uma instalação nova, crie o projeto, abra o **SQL Editor** e execute `supabase/schema.sql` inteiro.
+2. Se você **já está na V2.2 com Supabase funcionando**, não repita o schema: execute **somente** `supabase/migration-v2.2.1.sql` antes de testar o novo checkout.
+3. Em Authentication, mantenha login por e-mail/senha configurado.
+4. Cadastre sua conta em `/entrar/`.
+5. Promova sua conta a admin:
 
 ```sql
 update public.profiles
@@ -82,7 +83,7 @@ set role = 'admin'
 where email = 'SEU_EMAIL';
 ```
 
-8. Copie para o Netlify:
+6. Copie para o Netlify:
 
 ```text
 SUPABASE_URL=
@@ -147,46 +148,76 @@ R2_MEDIA_PUBLIC_URL=
 
 ---
 
-# 4. Mercado Pago
+# 4. Mercado Pago — V2.2.1
 
-## Cartão — checkout definitivo do Mercado Pago
+## Antes de testar
 
-A DeHax **não possui campos de cartão**. O botão de cartão chama a Function `create-subscription`, cria/associa a assinatura e redireciona o membro para o `init_point` hospedado pelo Mercado Pago.
+No projeto Supabase já existente, execute `supabase/migration-v2.2.1.sql`. A migração adiciona `plan_code`/`payment_method` em `payment_orders` e os preços do mensal/semestral nas configurações.
 
-Configure:
+## Variáveis Netlify
 
 ```text
-MP_ACCESS_TOKEN=APP_USR-...
-MP_PLAN_ID=SEU_PREAPPROVAL_PLAN_ID
+MP_PUBLIC_KEY=
+MP_SUBSCRIPTIONS_ACCESS_TOKEN=
+MP_ORDERS_ACCESS_TOKEN=
+MP_PLAN_ID=
+MP_TEST_MODE=true
+MP_TEST_SUBSCRIPTION_PAYER_EMAIL=EMAIL_DA_CONTA_TESTE_COMPRADOR
+MP_TEST_PIX_PAYER_EMAIL=test_user_br@testuser.com
+MP_SUBSCRIPTIONS_WEBHOOK_SECRET=
+MP_ORDERS_WEBHOOK_SECRET=
 ```
 
-O plano deve ser recorrente, por exemplo mensal.
+- `MP_PUBLIC_KEY` é pública e é usada pelo MercadoPago.js no navegador. Use a Public Key da aplicação usada para cartão/assinaturas.
+- `MP_SUBSCRIPTIONS_ACCESS_TOKEN` é secreto e é usado pelo backend para assinatura mensal e pagamento único semestral em cartão.
+- `MP_ORDERS_ACCESS_TOKEN` é secreto e é usado somente para Orders/Pix.
+- `MP_PLAN_ID` é o ID do plano mensal recorrente de R$ 19,90 já criado no Mercado Pago.
+- `MP_ACCESS_TOKEN` continua aceito como fallback legado, mas as variáveis separadas acima têm prioridade.
+- Em `MP_TEST_MODE=true`, use `MP_TEST_SUBSCRIPTION_PAYER_EMAIL` com o e-mail da conta de teste compradora do Mercado Pago e deixe `MP_TEST_PIX_PAYER_EMAIL=test_user_br@testuser.com`. Em produção, use `MP_TEST_MODE=false`.
 
-Após a autorização, o webhook atualiza o perfil para PRO. O retorno da compra volta a `/checkout/?retorno=cartao`; a tela aguarda a confirmação e então envia o usuário à área de membros.
+## Mensal — R$ 19,90/mês
 
-Na área **Minha Conta**, uma assinatura recorrente ativa mostra **Cancelar recorrência**. O backend cancela o `preapproval` no Mercado Pago. Quando o provedor informa uma `next_payment_date` futura, a plataforma preserva o acesso até essa data e bloqueia novas cobranças.
+O checkout permanece visualmente dentro da DeHax. O **Card Payment Brick** coleta e tokeniza o cartão. A DeHax recebe apenas um `card_token_id` temporário e dados técnicos do meio de pagamento; número completo, validade e CVV não são persistidos pela plataforma.
 
-## Pix — QR dentro da DeHax
+A Function `create-subscription` envia ao `/preapproval`:
 
-O botão Pix usa a Orders API no backend. A tela recebe apenas os dados necessários para exibir:
+- `MP_PLAN_ID`;
+- `card_token_id`;
+- `external_reference` = ID do usuário Supabase;
+- `status=authorized`.
 
-- QR Code;
-- código Pix copia e cola;
-- status do pedido.
+Antes de criar a assinatura, o backend também confere se o preço mensal exibido pela DeHax é igual ao valor real do `MP_PLAN_ID`; se houver divergência, a venda é bloqueada para evitar cobrança diferente da oferta.
 
-A tela consulta o status do pedido. Quando o Mercado Pago confirma o pagamento, o backend libera PRO e redireciona para `/app/`.
+A cobrança é recorrente mensal. O botão **Cancelar recorrência** cancela futuras renovações no Mercado Pago e mantém o PRO até o fim do ciclo já pago, usando `next_payment_date` (com fallback defensivo pelo ciclo mensal).
 
-O número de dias concedidos por uma compra Pix é configurável no Admin em **Site & conteúdo** (`pix_access_days`). O padrão é 30 dias.
+## Semestral — R$ 59,40 à vista
 
-## Webhook
+O plano semestral equivale a **R$ 9,90/mês** e é uma compra única de seis meses, sem renovação automática. Comparado a seis mensalidades de R$ 19,90 (R$ 119,40), a economia exibida é de R$ 60,00, aproximadamente 50%.
 
-Configure no Mercado Pago:
+- **Cartão:** Card Payment Brick + `/v1/payments`, com `installments=1`; não há parcelamento.
+- **Pix:** Orders API, QR Code e Pix Copia e Cola dentro da DeHax.
+- Pagamento aprovado concede 6 meses-calendário de PRO. O código possui proteção de idempotência para não somar outros 6 meses quando o mesmo webhook/status for recebido novamente.
+
+O Pix fica disponível no semestral. O mensal exige cartão porque é uma assinatura recorrente automática.
+
+## Webhooks
+
+URL:
 
 ```text
 https://SEU-DOMINIO/.netlify/functions/mp-webhook
 ```
 
-O backend não confia apenas no corpo recebido: ele consulta o pedido/assinatura diretamente no Mercado Pago antes de liberar acesso.
+Se cartão/assinaturas e Orders estiverem em aplicações diferentes, configure a mesma URL nas duas aplicações, usando o segredo correspondente em cada variável:
+
+- aplicação cartão/assinaturas: `subscription_preapproval` e `payment`;
+- aplicação Orders/Pix: `order`.
+
+A Function valida `x-signature` quando o respectivo segredo estiver configurado e consulta o objeto novamente na API antes de liberar acesso.
+
+## Teste Pix
+
+O sandbox oficial do Pix/Orders serve para validar a criação da Order com dados de teste. Não trate um QR sandbox como uma cobrança real. Para validar liquidação ponta a ponta em produção, faça posteriormente um Pix real de pequeno valor no ambiente apropriado.
 
 ---
 
@@ -413,8 +444,15 @@ R2_MEDIA_PUBLIC_URL=https://media.seudominio.com
 DOWNLOAD_HASH_SALT=STRING_LONGA
 DOWNLOAD_DAILY_LIMIT=1000
 
-MP_ACCESS_TOKEN=
+MP_PUBLIC_KEY=
+MP_SUBSCRIPTIONS_ACCESS_TOKEN=
+MP_ORDERS_ACCESS_TOKEN=
 MP_PLAN_ID=
+MP_TEST_MODE=true
+MP_TEST_SUBSCRIPTION_PAYER_EMAIL=
+MP_TEST_PIX_PAYER_EMAIL=test_user_br@testuser.com
+MP_SUBSCRIPTIONS_WEBHOOK_SECRET=
+MP_ORDERS_WEBHOOK_SECRET=
 
 VOD_SERVICE_URL=
 VOD_INTERNAL_TOKEN=
@@ -451,7 +489,7 @@ Publique no Netlify.
 1. **Supabase** — executar schema, chaves e admin real.
 2. **R2 privado + R2 Media** — criar buckets, domínio público da mídia, API e CORS.
 3. **Admin** — colocar textos, logo, vídeos, categorias e assets reais.
-4. **Mercado Pago** — aplicação, plano recorrente, produção, webhook e teste Pix/cartão.
+4. **Mercado Pago** — Brick de cartão, assinatura mensal, semestral à vista, Orders/Pix, webhooks e testes.
 5. **VOD Worker** — publicar container e preencher URL/token.
 6. **Meta** — definir Pixel, validar consentimento e eventos.
 7. **Legal** — preencher responsável/suporte e revisar os textos antes de abrir vendas.
@@ -489,3 +527,12 @@ Publique no Netlify.
 ## Direitos/licenças dos assets
 
 Antes de disponibilizar músicas, memes, trechos de filmes/séries, SFX ou outros materiais de terceiros para download, confirme que a DeHax possui permissão/licença para redistribuição. Um acesso fechado ou pago não cria, por si só, direito de redistribuir material protegido.
+
+
+### Renovação Pix mensal
+
+- Pix mensal: pagamento avulso, padrão 30 dias (`pix_access_days`).
+- Pix semestral: pagamento avulso, 6 meses.
+- Renovação antecipada soma o novo período ao final do acesso vigente; não perde dias.
+- Aviso de renovação dentro da área de membros com antecedência configurável (`renewal_notice_days`, padrão 7).
+- A renovação automática via Pix não está habilitada neste checkout customizado; o cartão mensal continua recorrente automaticamente.

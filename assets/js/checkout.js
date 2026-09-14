@@ -4,7 +4,7 @@
   const GUEST_KEY='dehax_checkout_guest_v2';
   let profile=null,currentUser=null,checkoutToken='',checkoutIdentity=null,guestCreated=false,needsEmailConfirmation=false;
   let settings={},selectedPlan=new URLSearchParams(location.search).get('plan')==='monthly'?'monthly':'semester',paymentMethod='card';
-  let brickController=null,bricksBuilder=null,brickEmail='',brickKey='',brickMountPromise=null,brickMountSeq=0,orderId='',orderPlan='',poll=null;
+  let brickController=null,bricksBuilder=null,brickBuilderPublicKey='',brickEmail='',brickKey='',brickMountPromise=null,brickMountSeq=0,orderId='',orderPlan='',poll=null;
   let probeTimer=null,probeSeq=0,probeResolvedEmail='',probeExists=false,probeEmailConfirmed=true;
 
   const toast=(msg,type='ok')=>{const d=document.createElement('div');d.className=`toast ${type}`;d.textContent=msg;$('#toasts').appendChild(d);setTimeout(()=>d.remove(),4300)};
@@ -16,6 +16,7 @@
   const semesterMonthly=()=>num(settings.pro_semester_monthly_equiv||'9.90')||9.9;
   const pixDays=()=>Math.max(1,Math.round(num(settings.pix_access_days||30)||30));
   const selectedAmount=()=>selectedPlan==='monthly'?monthlyPrice():semesterTotal();
+  const selectedCardPublicKey=()=>selectedPlan==='monthly'?(DehaxAPI.config.mpSubscriptionsPublicKey||DehaxAPI.config.mpPublicKey||''):(DehaxAPI.config.mpOrdersPublicKey||'');
   const payerEmail=()=>String(currentUser?.email||checkoutIdentity?.email||$('#checkoutEmail')?.value||'').trim().toLowerCase();
   const recurringActive=()=>!!profile?.subscription_id&&['authorized','active','trialing'].includes(String(profile?.subscription_status||'').toLowerCase());
   const activeUntil=()=>profile?.access_expires_at&&new Date(profile.access_expires_at).getTime()>Date.now()?new Date(profile.access_expires_at):null;
@@ -175,10 +176,18 @@
   async function ensureCardBrick(){
     if(paymentMethod!=='card')return null;
     const email=payerEmail();
+    const brickPayerEmail=(selectedPlan==='semester'&&DehaxAPI.config.mpTestMode)?'test@testuser.com':email;
     const readyIdentity=!!currentUser||!!checkoutToken||(validEmail(email)&&probeResolvedEmail===email);
     if(!validEmail(email)||!readyIdentity){await unmountBrick();$('#cardWaiting').hidden=false;$('#cardBrickLoading').hidden=true;return null}
-    if(!DehaxAPI.config.mpPublicKey){$('#cardWaiting').hidden=false;$('#cardWaiting').textContent='MP_PUBLIC_KEY ainda não foi configurada no Netlify.';return null}
-    const key=`${email}|${selectedPlan}|${selectedAmount()}`;
+    const publicKey=selectedCardPublicKey();
+    if(!publicKey){
+      $('#cardWaiting').hidden=false;
+      $('#cardWaiting').textContent=selectedPlan==='monthly'
+        ? 'MP_PUBLIC_KEY (ou MP_SUBSCRIPTIONS_PUBLIC_KEY) ainda não foi configurada no Netlify.'
+        : 'MP_ORDERS_PUBLIC_KEY ainda não foi configurada no Netlify para o cartão semestral.';
+      return null;
+    }
+    const key=`${email}|${selectedPlan}|${selectedAmount()}|${publicKey.slice(0,12)}`;
     if(brickController&&brickKey===key)return brickController;
     if(brickMountPromise&&brickKey===key)return brickMountPromise;
 
@@ -192,10 +201,14 @@
         if(oldController){try{await oldController.unmount()}catch{}}
         $('#cardPaymentBrick_container').innerHTML='';
         if(!window.MercadoPago)throw new Error('SDK do Mercado Pago não carregou. Atualize a página e tente novamente.');
-        if(!bricksBuilder){const mp=new MercadoPago(DehaxAPI.config.mpPublicKey,{locale:'pt-BR'});bricksBuilder=mp.bricks()}
+        if(!bricksBuilder||brickBuilderPublicKey!==publicKey){
+          const mp=new MercadoPago(publicKey,{locale:'pt-BR'});
+          bricksBuilder=mp.bricks();
+          brickBuilderPublicKey=publicKey;
+        }
         const amount=selectedAmount();
         const controller=await bricksBuilder.create('cardPayment','cardPaymentBrick_container',{
-          initialization:{amount,payer:{email}},
+          initialization:{amount,payer:{email:brickPayerEmail}},
           customization:{paymentMethods:{types:{excluded:['debit_card','prepaid_card']},minInstallments:1,maxInstallments:1},visual:{hidePaymentButton:true,style:{theme:'dark',customVariables:{baseColor:'#ff294d',buttonTextColor:'#ffffff',formBackgroundColor:'#080d13',inputBackgroundColor:'#0b1118',textPrimaryColor:'#f4f7fb',textSecondaryColor:'#7f8b98',outlinePrimaryColor:'#24313d',borderRadiusMedium:'12px'}}}},
           callbacks:{
             onReady:()=>{if(mountSeq===brickMountSeq){$('#cardBrickLoading').hidden=true;$('#cardBrickError').hidden=true}},

@@ -4,7 +4,9 @@ const cfg = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
   siteUrl: process.env.URL || process.env.DEPLOY_PRIME_URL || '',
   checkoutFallbackUrl: process.env.MP_CHECKOUT_FALLBACK_URL || '',
-  mpPublicKey: process.env.MP_PUBLIC_KEY || '',
+  mpPublicKey: process.env.MP_SUBSCRIPTIONS_PUBLIC_KEY || process.env.MP_PUBLIC_KEY || '',
+  mpSubscriptionsPublicKey: process.env.MP_SUBSCRIPTIONS_PUBLIC_KEY || process.env.MP_PUBLIC_KEY || '',
+  mpOrdersPublicKey: process.env.MP_ORDERS_PUBLIC_KEY || '',
   mpTestMode: String(process.env.MP_TEST_MODE || '').toLowerCase() === 'true',
   metaPixelId: process.env.META_PIXEL_ID || '',
   demoMode: String(process.env.DEHAX_DEMO_MODE || '').toLowerCase() === 'true'

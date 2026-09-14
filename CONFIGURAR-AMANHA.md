@@ -1,4 +1,4 @@
-# DeHax V2.2.7 — Checklist de configuração
+# DeHax V2.2.8 — Checklist de configuração
 
 Use este arquivo amanhã como ordem de trabalho. O código já está preparado; aqui entram apenas contas, chaves, conteúdo e testes reais.
 
@@ -167,3 +167,7 @@ Testar em desktop e celular:
 - banner de cookies;
 - landing de anúncio;
 - ausência de rolagem lateral mobile.
+
+
+### V2.2.8 — Orders
+Para cartão semestral e Pix em teste, configure `MP_ORDERS_PUBLIC_KEY` e `MP_ORDERS_ACCESS_TOKEN` com o par de **Credenciais de teste** da aplicação Checkout API via Orders API. O mensal recorrente continua usando as credenciais de Assinaturas.

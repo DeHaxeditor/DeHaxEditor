@@ -68,7 +68,7 @@ export function presignR2({method='GET',key,expires=120,responseDisposition,buck
 
 // Mercado Pago helpers — V2.2.1
 export function mpSubscriptionsToken(){return env('MP_SUBSCRIPTIONS_ACCESS_TOKEN',false)||env('MP_ACCESS_TOKEN')}
-export function mpOrdersToken(){return env('MP_ORDERS_ACCESS_TOKEN',false)||env('MP_ACCESS_TOKEN')}
+export function mpOrdersToken(){const token=env('MP_ORDERS_ACCESS_TOKEN',false);if(token)return token;if(String(process.env.MP_TEST_MODE||'').toLowerCase()==='true')throw Object.assign(new Error('MP_ORDERS_ACCESS_TOKEN não foi configurado. Use o Access Token de TESTE da aplicação Orders.'),{status:500,expose:true});return env('MP_ACCESS_TOKEN')}
 export function mpDebug(){return String(process.env.MP_TEST_MODE||'').toLowerCase()==='true'}
 export function mpCardPayerEmail(fallback=''){return mpDebug()?(process.env.MP_TEST_SUBSCRIPTION_PAYER_EMAIL||fallback):fallback}
 export function mpError(data,fallback='O Mercado Pago recusou a operação.',status=502){

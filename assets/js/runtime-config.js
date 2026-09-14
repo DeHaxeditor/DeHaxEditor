@@ -4,6 +4,8 @@ window.DEHAX_CONFIG = {
   "siteUrl": "",
   "checkoutFallbackUrl": "",
   "mpPublicKey": "",
+  "mpSubscriptionsPublicKey": "",
+  "mpOrdersPublicKey": "",
   "mpTestMode": false,
   "metaPixelId": "",
   "demoMode": false

@@ -30,8 +30,8 @@ async function handleSubscription(id){
 }
 async function handleOrder(id){
   const r=await fetch(`https://api.mercadopago.com/v1/orders/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${mpOrdersToken()}`}});if(!r.ok)return {ignored:'order-not-found'};
-  const order=await r.json();const {data:rows}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&kind=eq.pix&select=*`);const local=rows?.[0];if(!local)return {ignored:'unknown-order'};
-  const paid=String(order.status)==='processed'||order.transactions?.payments?.some(p=>String(p.status)==='processed'&&String(p.status_detail||'')==='accredited');
+  const order=await r.json();const {data:rows}=await sb(`/rest/v1/payment_orders?provider_order_id=eq.${encodeURIComponent(id)}&select=*`);const local=(rows||[]).find(x=>x.kind==='pix'||x.kind==='card_once');if(!local)return {ignored:'unknown-order'};
+  const paid=String(order.status)==='processed'||order.transactions?.payments?.some(p=>String(p.status)==='processed'&&(!p.status_detail||String(p.status_detail)==='accredited'));
   if(paid&&['monthly','semester'].includes(String(local.plan_code||'')))await grantFixedProForOrder(local.id);
   await sb(`/rest/v1/payment_orders?id=eq.${encodeURIComponent(local.id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:String(order.status||'pending'),raw:order}});return {status:order.status,paid};
 }

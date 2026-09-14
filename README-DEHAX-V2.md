@@ -1,4 +1,4 @@
-# DeHax Editor — Plataforma de Membros V2.2.7
+# DeHax Editor — Plataforma de Membros V2.2.8
 
 A V2.2.3 mantém a identidade visual aprovada da DeHax e simplifica o checkout para que cadastro e pagamento aconteçam na mesma tela, além de corrigir a criação de usuários via Supabase Auth.
 
@@ -558,17 +558,30 @@ Antes de disponibilizar músicas, memes, trechos de filmes/séries, SFX ou outro
 - Aviso de renovação dentro da área de membros com antecedência configurável (`renewal_notice_days`, padrão 7).
 - A renovação automática via Pix não está habilitada neste checkout customizado; o cartão mensal continua recorrente automaticamente.
 
-## V2.2.7 — correção de homologação do checkout
+## V2.2.8 — correção de homologação do checkout
 
-A V2.2.7 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
+A V2.2.8 serializa a montagem do Card Payment Brick, evita restauração de tentativas temporárias incompletas ao abrir novamente o checkout e exibe detalhes úteis de erros do Mercado Pago durante a homologação. Não requer migration nem novas variáveis de ambiente.
 
 
-## V2.2.7 — correção de sessão do checkout convidado
+## V2.2.8 — correção de sessão do checkout convidado
 
-A V2.2.7 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
+A V2.2.8 corrige o checkout de usuários não logados. O frontend não envia mais `Authorization: Bearer` vazio nas chamadas às Netlify Functions. Em alguns runtimes esse cabeçalho era normalizado como um token não vazio, fazendo o backend tentar validar uma sessão Supabase inexistente e retornar `401 Sessão inválida ou expirada`, ignorando o `checkoutToken` temporário correto.
 
 Não requer migration nem novas variáveis de ambiente.
 
-## V2.2.7 — payload mínimo de assinatura e diagnóstico seguro
+## V2.2.8 — payload mínimo de assinatura e diagnóstico seguro
 
-A V2.2.7 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
+A V2.2.8 reduz o POST de assinatura mensal associada ao plano aos campos efetivamente necessários ao fluxo DeHax (`preapproval_plan_id`, `external_reference`, `payer_email`, `card_token_id` e `status=authorized`). `reason` e `back_url` deixaram de ser reenviados na criação da assinatura porque já pertencem à configuração do plano e são opcionais nesse cenário. Em homologação (`MP_TEST_MODE=true`), a Function registra metadados seguros do plano e da tentativa sem registrar o CardToken ou credenciais.
+
+
+## V2.2.8 — credenciais separadas para Assinaturas e Orders
+
+A assinatura mensal e os pagamentos avulsos usam fluxos de teste diferentes no Mercado Pago.
+
+- **Mensal recorrente:** continua usando a aplicação da conta vendedora de teste e `MP_PUBLIC_KEY`/`MP_SUBSCRIPTIONS_ACCESS_TOKEN` (as credenciais aparecem como produção dentro da conta teste).
+- **Semestral no cartão + Pix:** usam **Checkout API via Orders API** e precisam das credenciais de **teste** da aplicação Orders: `MP_ORDERS_PUBLIC_KEY` e `MP_ORDERS_ACCESS_TOKEN`.
+- O checkout escolhe automaticamente a Public Key correta: assinatura para o mensal e Orders para o cartão semestral.
+- O cartão semestral agora também é processado por `/v1/orders`, igual ao Pix, em vez de usar `/v1/payments` com a credencial da assinatura.
+- Em teste, o cartão avulso usa `test@testuser.com` e o Pix usa `test_user_br@testuser.com`, conforme os cenários oficiais da Orders API.
+
+Não reutilize o token de Assinaturas como `MP_ORDERS_ACCESS_TOKEN`. Em teste, isso resulta em erros como `Unauthorized use of live credentials`.

@@ -201,30 +201,41 @@
   ];
   const DEMO_SUBCATEGORY_LINKS=[{id:'scl1',parent_subcategory_id:'sc1',child_subcategory_id:'sc2',sort_order:10},{id:'scl2',parent_subcategory_id:'sc1',child_subcategory_id:'sc3',sort_order:20}];
   const DEMO_CATEGORY_TAGS=[{id:'tag1',category_id:'c-sfx',name:'gameplay',slug:'gameplay',status:'active',sort_order:10},{id:'tag2',category_id:'c-sfx',name:'interface',slug:'interface',status:'active',sort_order:20}];
-  async function getCategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORIES;const filter=all?'':'&status=eq.active';const r=await supabaseFetch(`/rest/v1/asset_categories?select=*&order=sort_order.asc,name.asc${filter}`);if(!r.ok)return [];return r.json()}
-  async function getSubcategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORIES;const filter=all?'':'&status=eq.active';const r=await supabaseFetch(`/rest/v1/asset_subcategories?select=*&order=sort_order.asc,name.asc${filter}`);if(!r.ok)return [];return r.json()}
-  async function getSubcategoryLinks(){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORY_LINKS;const r=await supabaseFetch('/rest/v1/asset_subcategory_links?select=*&order=sort_order.asc,created_at.asc');if(!r.ok)return [];return r.json()}
-  async function getCategoryTags({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORY_TAGS;const filter=all?'':'&status=eq.active';const r=await supabaseFetch(`/rest/v1/asset_category_tags?select=*&order=sort_order.asc,name.asc${filter}`);if(!r.ok)return [];return r.json()}
+  // PostgREST/Supabase limits each REST response (commonly to 1,000 rows).
+  // Always paginate collection reads so the library/admin never silently drops older assets.
+  async function fetchAllRows(path,{pageSize=1000,maxPages=1000}={}){
+    const all=[];
+    for(let page=0;page<maxPages;page++){
+      const offset=page*pageSize;
+      const sep=path.includes('?')?'&':'?';
+      const r=await supabaseFetch(`${path}${sep}limit=${pageSize}&offset=${offset}`);
+      if(!r.ok)throw new Error(`Falha ao carregar dados (${r.status}).`);
+      const rows=await r.json();
+      if(!Array.isArray(rows))return all;
+      all.push(...rows);
+      if(rows.length<pageSize)return all;
+    }
+    throw new Error('A consulta excedeu o limite de paginação de segurança.');
+  }
+
+  async function getCategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORIES;const filter=all?'':'&status=eq.active';try{return await fetchAllRows(`/rest/v1/asset_categories?select=*&order=sort_order.asc,name.asc${filter}`)}catch{return []}}
+  async function getSubcategories({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORIES;const filter=all?'':'&status=eq.active';try{return await fetchAllRows(`/rest/v1/asset_subcategories?select=*&order=sort_order.asc,name.asc${filter}`)}catch{return []}}
+  async function getSubcategoryLinks(){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORY_LINKS;try{return await fetchAllRows('/rest/v1/asset_subcategory_links?select=*&order=sort_order.asc,created_at.asc')}catch{return []}}
+  async function getCategoryTags({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORY_TAGS;const filter=all?'':'&status=eq.active';try{return await fetchAllRows(`/rest/v1/asset_category_tags?select=*&order=sort_order.asc,name.asc${filter}`)}catch{return []}}
 
   async function getAssets({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
     const filter = all ? '' : '&status=eq.published';
-    const r=await supabaseFetch(`/rest/v1/assets?select=*&order=created_at.desc${filter}`);
-    if(!r.ok) throw new Error('Falha ao carregar assets.');
-    return r.json();
+    return fetchAllRows(`/rest/v1/assets?select=*&order=created_at.desc,id.desc${filter}`);
   }
   async function getTutorials({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_TUTORIALS;
     const filter = all ? '' : '&status=eq.published';
-    const r=await supabaseFetch(`/rest/v1/tutorials?select=*&order=order_index.asc,created_at.desc${filter}`);
-    if(!r.ok) throw new Error('Falha ao carregar tutoriais.');
-    return r.json();
+    return fetchAllRows(`/rest/v1/tutorials?select=*&order=order_index.asc,created_at.desc,id.desc${filter}`);
   }
   async function getFavorites(){
     if (demoEnabled && !config.supabaseUrl) return JSON.parse(localStorage.getItem('dehax_demo_favs')||'[]');
-    const r=await supabaseFetch('/rest/v1/favorites?select=asset_id');
-    if(!r.ok) return [];
-    return (await r.json()).map(x=>x.asset_id);
+    try{return (await fetchAllRows('/rest/v1/favorites?select=asset_id&order=created_at.desc')).map(x=>x.asset_id)}catch{return []}
   }
   async function toggleFavorite(assetId,on){
     if (demoEnabled && !config.supabaseUrl) {
@@ -292,8 +303,11 @@
   async function vodStatus(jobId){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:jobId,status:'done',progress:100,message:'Arquivo pronto no modo de demonstração.',download_url:'#',filename:'dehax-demo.mp4'};return callFunction('vod-status',{jobId})}
 
   async function adminFetch(table,{select='*',order='created_at.desc'}={}){
-    const r=await supabaseFetch(`/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}`);
-    if(!r.ok) throw new Error(`Falha ao carregar ${table}.`); return r.json();
+    try{
+      return await fetchAllRows(`/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}`);
+    }catch(err){
+      throw new Error(`Falha ao carregar ${table}: ${err.message||'erro desconhecido'}`);
+    }
   }
   async function adminInsert(table,row){
     const r=await supabaseFetch(`/rest/v1/${table}`,{method:'POST',headers:{...jsonHeaders,Prefer:'return=representation'},body:JSON.stringify(row)});

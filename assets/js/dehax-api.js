@@ -17,14 +17,61 @@
   }
   function token(){ return getSession()?.access_token || ''; }
 
+  let refreshPromise=null;
+  function jwtExp(accessToken){
+    try{
+      const part=String(accessToken||'').split('.')[1];
+      if(!part)return 0;
+      const normalized=part.replace(/-/g,'+').replace(/_/g,'/');
+      const padded=normalized+'='.repeat((4-normalized.length%4)%4);
+      return Number(JSON.parse(atob(padded))?.exp||0);
+    }catch{return 0}
+  }
+  function tokenNeedsRefresh(accessToken,skewSeconds=45){
+    const exp=jwtExp(accessToken);
+    return !!exp && exp <= Math.floor(Date.now()/1000)+skewSeconds;
+  }
+  async function refreshSession(force=false){
+    const s=getSession();
+    if(!s||s.access_token==='demo-token')return s;
+    if(!s.refresh_token)return s;
+    if(!force && s.access_token && !tokenNeedsRefresh(s.access_token))return s;
+    if(refreshPromise)return refreshPromise;
+    refreshPromise=(async()=>{
+      const r=await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=refresh_token`,{
+        method:'POST',
+        headers:{...jsonHeaders,apikey:config.supabaseAnonKey},
+        body:JSON.stringify({refresh_token:s.refresh_token})
+      });
+      const fresh=await r.json().catch(()=>({}));
+      if(!r.ok){
+        if(r.status===400||r.status===401)setSession(null);
+        throw new Error(fresh.message||fresh.msg||fresh.error_description||fresh.error||'Sua sessão expirou. Entre novamente.');
+      }
+      const merged={...s,...fresh,user:fresh.user||s.user};
+      setSession(merged);
+      return merged;
+    })();
+    try{return await refreshPromise}finally{refreshPromise=null}
+  }
+
   async function supabaseFetch(path, opts={}){
     if (!config.supabaseUrl || !config.supabaseAnonKey) throw new Error('Supabase não configurado.');
-    const headers = {
-      apikey: config.supabaseAnonKey,
-      ...opts.headers
+    const current=getSession();
+    if(current?.refresh_token && tokenNeedsRefresh(current.access_token))await refreshSession(true);
+    const makeHeaders=()=>{
+      const headers={apikey:config.supabaseAnonKey,...opts.headers};
+      if(token())headers.Authorization=`Bearer ${token()}`;
+      return headers;
     };
-    if (token()) headers.Authorization = `Bearer ${token()}`;
-    return fetch(`${config.supabaseUrl}${path}`, {...opts, headers});
+    let r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
+    if(r.status===401 && getSession()?.refresh_token){
+      try{
+        await refreshSession(true);
+        r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
+      }catch{}
+    }
+    return r;
   }
 
   async function signIn(email,password){
@@ -189,14 +236,25 @@
   }
 
   async function callFunction(name,body={}){
-    const accessToken=token();
-    if(accessToken==='demo-token') return {demo:true};
-    const headers={...jsonHeaders};
-    // Guest checkout requests must NOT send an empty Authorization header.
-    // Some runtimes normalize "Bearer " to "Bearer", which makes the backend
-    // think there is a logged-in session and reject the temporary checkout token.
-    if(accessToken) headers.Authorization=`Bearer ${accessToken}`;
-    const r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers,body:JSON.stringify(body)});
+    if(token()==='demo-token') return {demo:true};
+    const current=getSession();
+    if(current?.refresh_token && tokenNeedsRefresh(current.access_token))await refreshSession(true);
+    const makeHeaders=()=>{
+      const headers={...jsonHeaders};
+      // Guest checkout requests must NOT send an empty Authorization header.
+      // Some runtimes normalize "Bearer " to "Bearer", which makes the backend
+      // think there is a logged-in session and reject the temporary checkout token.
+      if(token())headers.Authorization=`Bearer ${token()}`;
+      return headers;
+    };
+    const payload=JSON.stringify(body);
+    let r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers:makeHeaders(),body:payload});
+    if(r.status===401 && getSession()?.refresh_token){
+      try{
+        await refreshSession(true);
+        r=await fetch(`/.netlify/functions/${name}`,{method:'POST',headers:makeHeaders(),body:payload});
+      }catch{}
+    }
     const data=await r.json().catch(()=>({}));
     if(!r.ok){const e=new Error(data.error||data.message||`Erro ${r.status}`);Object.assign(e,data,{status:r.status});throw e;}
     return data;
@@ -249,5 +307,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

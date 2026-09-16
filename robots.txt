@@ -4,6 +4,7 @@ Disallow: /app/
 Disallow: /entrar/
 Disallow: /checkout/
 Disallow: /cms/
+Disallow: /confirmar-email/
 Allow: /
 
 Sitemap: https://dehax.com.br/sitemap.xml

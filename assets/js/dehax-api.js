@@ -306,10 +306,6 @@
   async function accountOverview(){if(demoEnabled&&!config.supabaseUrl)return {profile:{displayName:'Editor Demo',email:'demo@dehax.local',plan:'pro',subscriptionStatus:'authorized',createdAt:new Date().toISOString()},subscription:{status:'authorized',nextPaymentDate:new Date(Date.now()+20*86400000).toISOString(),amount:19.9,currency:'BRL'},payments:[],retention:{monthly:null,semester:null}};return callFunction('account-overview',{})}
   async function updateAccount(payload={}){if(demoEnabled&&!config.supabaseUrl)return {ok:true,...payload};return callFunction('account-update',payload)}
 
-  async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
-  async function vodStart(payload){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:'demo-job-'+Date.now(),status:'queued',progress:0};return callFunction('vod-start',payload)}
-  async function vodStatus(jobId){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:jobId,status:'done',progress:100,message:'Arquivo pronto no modo de demonstração.',download_url:'#',filename:'dehax-demo.mp4'};return callFunction('vod-status',{jobId})}
-
   async function adminFetch(table,{select='*',order='created_at.desc'}={}){
     try{
       return await fetchAllRows(`/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}`);
@@ -333,5 +329,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

@@ -64,17 +64,12 @@
       if(token())headers.Authorization=`Bearer ${token()}`;
       return headers;
     };
-    const timeoutMs=Number(opts.timeoutMs||12000);
-    const run=async()=>{
-      const controller=opts.signal?null:new AbortController();
-      const timer=controller?setTimeout(()=>controller.abort(),timeoutMs):null;
-      try{return await fetch(`${config.supabaseUrl}${path}`,{...opts,signal:opts.signal||controller.signal,headers:makeHeaders()})}
-      catch(e){if(e?.name==='AbortError')throw new Error('Tempo limite ao carregar dados.');throw e}
-      finally{if(timer)clearTimeout(timer)}
-    };
-    let r=await run();
+    let r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
     if(r.status===401 && getSession()?.refresh_token){
-      try{await refreshSession(true);r=await run()}catch{}
+      try{
+        await refreshSession(true);
+        r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
+      }catch{}
     }
     return r;
   }
@@ -228,23 +223,11 @@
   async function getSubcategoryLinks(){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORY_LINKS;try{return await fetchAllRows('/rest/v1/asset_subcategory_links?select=*&order=sort_order.asc,created_at.asc')}catch{return []}}
   async function getCategoryTags({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORY_TAGS;const filter=all?'':'&status=eq.active';try{return await fetchAllRows(`/rest/v1/asset_category_tags?select=*&order=sort_order.asc,name.asc${filter}`)}catch{return []}}
 
-  async function getAssets({all=false,limit=300,offset=0}={}){
+  async function getAssets({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
-    const filter=all?'':'&status=eq.published';
-    const n=Math.max(1,Math.min(1000,Number(limit)||300)),off=Math.max(0,Number(offset)||0);
-    const path=`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}&limit=${n}&offset=${off}`;
-    const r=await supabaseFetch(path,{timeoutMs:10000});
-    if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);
-    const rows=await r.json();
-    return Array.isArray(rows)?rows:[];
+    const filter = all ? '' : '&status=eq.published';
+    return fetchAllRows(`/rest/v1/assets?select=*&order=created_at.desc,id.desc${filter}`);
   }
-
-  async function getAllAssets({all=false}={}){
-    if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
-    const filter=all?'':'&status=eq.published';
-    return fetchAllRows(`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}`,{pageSize:1000,maxPages:20});
-  }
-
   async function getTutorials({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_TUTORIALS;
     const filter = all ? '' : '&status=eq.published';
@@ -315,6 +298,10 @@
   async function accountOverview(){if(demoEnabled&&!config.supabaseUrl)return {profile:{displayName:'Editor Demo',email:'demo@dehax.local',plan:'pro',subscriptionStatus:'authorized',createdAt:new Date().toISOString()},subscription:{status:'authorized',nextPaymentDate:new Date(Date.now()+20*86400000).toISOString(),amount:19.9,currency:'BRL'},payments:[],retention:{monthly:null,semester:null}};return callFunction('account-overview',{})}
   async function updateAccount(payload={}){if(demoEnabled&&!config.supabaseUrl)return {ok:true,...payload};return callFunction('account-update',payload)}
 
+  async function vodAnalyze(payload){if(demoEnabled&&!config.supabaseUrl){await sleep(500);return {demo:true,title:'Gameplay de demonstração — DeHax',uploader:'Canal Demo',duration:754,platform:/twitch/i.test(payload.url)?'Twitch':/kick/i.test(payload.url)?'Kick':'YouTube',thumbnail:''}}return callFunction('vod-analyze',payload)}
+  async function vodStart(payload){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:'demo-job-'+Date.now(),status:'queued',progress:0};return callFunction('vod-start',payload)}
+  async function vodStatus(jobId){if(demoEnabled&&!config.supabaseUrl)return {demo:true,id:jobId,status:'done',progress:100,message:'Arquivo pronto no modo de demonstração.',download_url:'#',filename:'dehax-demo.mp4'};return callFunction('vod-status',{jobId})}
+
   async function adminFetch(table,{select='*',order='created_at.desc'}={}){
     try{
       return await fetchAllRows(`/rest/v1/${table}?select=${encodeURIComponent(select)}&order=${encodeURIComponent(order)}`);
@@ -338,5 +325,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getAllAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,vodAnalyze,vodStart,vodStatus,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

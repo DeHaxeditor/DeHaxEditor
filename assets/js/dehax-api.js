@@ -226,7 +226,7 @@
   async function getAssets({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
     const filter=all?'':'&status=eq.published',pageSize=1000;
-    const base=`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}`;
+    const base=`/rest/v1/assets?select=*&order=created_at.desc,id.desc${filter}`;
     const first=await supabaseFetch(`${base}&limit=${pageSize}&offset=0`,{headers:{Prefer:'count=exact'}});
     if(!first.ok)throw new Error(`Falha ao carregar assets (${first.status}).`);
     const rows=await first.json();

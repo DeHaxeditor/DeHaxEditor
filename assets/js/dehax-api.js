@@ -64,12 +64,17 @@
       if(token())headers.Authorization=`Bearer ${token()}`;
       return headers;
     };
-    let r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
+    const timeoutMs=Number(opts.timeoutMs||12000);
+    const run=async()=>{
+      const controller=opts.signal?null:new AbortController();
+      const timer=controller?setTimeout(()=>controller.abort(),timeoutMs):null;
+      try{return await fetch(`${config.supabaseUrl}${path}`,{...opts,signal:opts.signal||controller.signal,headers:makeHeaders()})}
+      catch(e){if(e?.name==='AbortError')throw new Error('Tempo limite ao carregar dados.');throw e}
+      finally{if(timer)clearTimeout(timer)}
+    };
+    let r=await run();
     if(r.status===401 && getSession()?.refresh_token){
-      try{
-        await refreshSession(true);
-        r=await fetch(`${config.supabaseUrl}${path}`,{...opts,headers:makeHeaders()});
-      }catch{}
+      try{await refreshSession(true);r=await run()}catch{}
     }
     return r;
   }
@@ -223,23 +228,23 @@
   async function getSubcategoryLinks(){if(demoEnabled&&!config.supabaseUrl)return DEMO_SUBCATEGORY_LINKS;try{return await fetchAllRows('/rest/v1/asset_subcategory_links?select=*&order=sort_order.asc,created_at.asc')}catch{return []}}
   async function getCategoryTags({all=false}={}){if(demoEnabled&&!config.supabaseUrl)return DEMO_CATEGORY_TAGS;const filter=all?'':'&status=eq.active';try{return await fetchAllRows(`/rest/v1/asset_category_tags?select=*&order=sort_order.asc,name.asc${filter}`)}catch{return []}}
 
-  async function getAssets({all=false}={}){
+  async function getAssets({all=false,limit=300,offset=0}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
-    const filter=all?'':'&status=eq.published',pageSize=1000;
-    const base=`/rest/v1/assets?select=*&order=created_at.desc,id.desc${filter}`;
-    const first=await supabaseFetch(`${base}&limit=${pageSize}&offset=0`,{headers:{Prefer:'count=exact'}});
-    if(!first.ok)throw new Error(`Falha ao carregar assets (${first.status}).`);
-    const rows=await first.json();
-    const range=String(first.headers.get('content-range')||''),m=range.match(/\/(\d+)$/),total=m?Number(m[1]):NaN;
-    if(Number.isFinite(total)){
-      if(total<=rows.length)return rows;
-      const offsets=[];for(let offset=pageSize;offset<total;offset+=pageSize)offsets.push(offset);
-      const pages=await Promise.all(offsets.map(async offset=>{const r=await supabaseFetch(`${base}&limit=${pageSize}&offset=${offset}`);if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);return r.json()}));
-      return rows.concat(...pages);
-    }
-    if(rows.length<pageSize)return rows;
-    const allRows=[...rows];for(let offset=pageSize;;offset+=pageSize){const r=await supabaseFetch(`${base}&limit=${pageSize}&offset=${offset}`);if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);const page=await r.json();allRows.push(...page);if(page.length<pageSize)break}return allRows;
+    const filter=all?'':'&status=eq.published';
+    const n=Math.max(1,Math.min(1000,Number(limit)||300)),off=Math.max(0,Number(offset)||0);
+    const path=`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}&limit=${n}&offset=${off}`;
+    const r=await supabaseFetch(path,{timeoutMs:10000});
+    if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);
+    const rows=await r.json();
+    return Array.isArray(rows)?rows:[];
   }
+
+  async function getAllAssets({all=false}={}){
+    if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
+    const filter=all?'':'&status=eq.published';
+    return fetchAllRows(`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}`,{pageSize:1000,maxPages:20});
+  }
+
   async function getTutorials({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_TUTORIALS;
     const filter = all ? '' : '&status=eq.published';
@@ -333,5 +338,5 @@
     const data=await r.json().catch(()=>[]); if(!r.ok) throw new Error(data.message||`Falha ao salvar ${table}.`); return data[0]||data;
   }
 
-  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
+  window.DehaxAPI={config,demoEnabled,getSession,token,refreshSession,signIn,signUp,verifyEmailOtp,resendSignupConfirmation,requestPasswordRecovery,verifyPasswordRecoveryOtp,updateRecoveredPassword,signOut,currentUser,currentProfile,getAssets,getAllAssets,getTutorials,getCategories,getSubcategories,getSubcategoryLinks,getCategoryTags,getFavorites,toggleFavorite,assetAccess,tutorialAccess,probeCheckoutEmail,prepareCheckoutIdentity,createSubscription,createCardPayment,createPix,paymentStatus,cancelSubscription,subscriptionRetention,requestRefund,audioAiStatus,generateAiAudio,aiAudioFile,accountOverview,updateAccount,callFunction,adminFetch,adminInsert,adminUpdate,adminDelete,adminUpsert,supabaseFetch};
 })();

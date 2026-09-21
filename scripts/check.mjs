@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 const required=[
-  'index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html','checkout/index.html',
+  'index.html','comunidade/index.html','entrar/index.html','app/index.html','admin/index.html','checkout/index.html','manager/index.html',
   'privacidade/index.html','termos/index.html','cookies/index.html','confirmar-email/index.html','assets/brand/dehax-logo.png',
-  'assets/js/dehax-api.js','assets/js/member.js','assets/js/admin.js','assets/js/ui.js','assets/js/tracking.js','assets/js/site-settings.js',
+  'assets/js/dehax-api.js','assets/js/member.js','assets/js/admin.js','assets/js/ui.js','assets/js/tracking.js','assets/js/site-settings.js','assets/js/manager-download.js',
   'netlify/functions/asset-access.mjs','netlify/functions/admin-upload-url.mjs','netlify/functions/create-subscription.mjs','netlify/functions/subscription-retention.mjs','netlify/functions/refund-request.mjs','netlify/functions/manage-retention-discounts.mjs',
   'netlify/functions/create-card-payment.mjs','netlify/functions/create-pix.mjs','netlify/functions/payment-status.mjs','netlify/functions/cancel-subscription.mjs','netlify/functions/mp-webhook.mjs','netlify/functions/ai-audio-status.mjs','netlify/functions/ai-audio-generate.mjs','netlify/functions/ai-audio-file.mjs','netlify/functions/cleanup-ai-audio.mjs','netlify/functions/account-overview.mjs','netlify/functions/account-update.mjs',
   'netlify/functions/tutorial-access.mjs','netlify/functions/track-event.mjs','netlify/functions/vod-analyze.mjs',
@@ -11,7 +11,7 @@ const required=[
 ];
 let bad=false;
 for(const f of required){if(!fs.existsSync(f)){console.error('MISSING',f);bad=true}}
-const htmlFiles=['index.html','comunidade/index.html','entrar/index.html','confirmar-email/index.html','app/index.html','admin/index.html','checkout/index.html','privacidade/index.html','termos/index.html','cookies/index.html'];
+const htmlFiles=['index.html','comunidade/index.html','entrar/index.html','confirmar-email/index.html','app/index.html','admin/index.html','checkout/index.html','manager/index.html','privacidade/index.html','termos/index.html','cookies/index.html'];
 for(const f of htmlFiles){
   const s=fs.readFileSync(f,'utf8');
   for(const m of s.matchAll(/(?:src|href)="(\/assets\/[^"?#]+)"/g)){

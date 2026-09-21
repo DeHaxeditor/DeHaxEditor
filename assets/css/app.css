@@ -111,3 +111,8 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:250px 1fr;m
 @media(max-width:1180px){.tools-product-grid{grid-template-columns:1fr}.tool-product-card{grid-template-columns:minmax(220px,.7fr) 1.3fr}}
 @media(max-width:800px){.library-tools-v2{grid-template-columns:1fr}.library-quick-filters{justify-content:flex-start}.tool-product-card{grid-template-columns:1fr}.tool-cover{min-height:430px}.tool-product-body{padding:3px 2px}.tool-download-btn{margin-top:8px}}
 @media(max-width:520px){.library-filter-toggle{flex:1;min-width:calc(50% - 5px)}.tool-cover{min-height:350px}}
+
+.library-load-more{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0 6px}
+.library-load-more[hidden]{display:none!important}
+.library-load-more .btn{min-width:210px}
+.library-load-more small{color:#53616d;font-size:9px}

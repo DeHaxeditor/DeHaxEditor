@@ -225,8 +225,16 @@
 
   async function getAssets({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_ASSETS;
-    const filter = all ? '' : '&status=eq.published';
-    return fetchAllRows(`/rest/v1/assets?select=*&order=created_at.desc,id.desc${filter}`);
+    const filter=all?'':'&status=eq.published',pageSize=1000;
+    const base=`/rest/v1/assets?select=*&order=download_count.desc,created_at.desc,id.desc${filter}`;
+    const first=await supabaseFetch(`${base}&limit=${pageSize}&offset=0`,{headers:{Prefer:'count=exact'}});
+    if(!first.ok)throw new Error(`Falha ao carregar assets (${first.status}).`);
+    const rows=await first.json();
+    const range=String(first.headers.get('content-range')||''),m=range.match(/\/(\d+)$/),total=m?Number(m[1]):rows.length;
+    if(!Number.isFinite(total)||total<=rows.length)return rows;
+    const offsets=[];for(let offset=pageSize;offset<total;offset+=pageSize)offsets.push(offset);
+    const pages=await Promise.all(offsets.map(async offset=>{const r=await supabaseFetch(`${base}&limit=${pageSize}&offset=${offset}`);if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);return r.json()}));
+    return rows.concat(...pages);
   }
   async function getTutorials({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_TUTORIALS;

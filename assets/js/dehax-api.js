@@ -238,7 +238,7 @@
       return rows.concat(...pages);
     }
     if(rows.length<pageSize)return rows;
-    const all=[...rows];for(let offset=pageSize;;offset+=pageSize){const r=await supabaseFetch(`${base}&limit=${pageSize}&offset=${offset}`);if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);const page=await r.json();all.push(...page);if(page.length<pageSize)break}return all;
+    const allRows=[...rows];for(let offset=pageSize;;offset+=pageSize){const r=await supabaseFetch(`${base}&limit=${pageSize}&offset=${offset}`);if(!r.ok)throw new Error(`Falha ao carregar assets (${r.status}).`);const page=await r.json();allRows.push(...page);if(page.length<pageSize)break}return allRows;
   }
   async function getTutorials({all=false}={}){
     if (demoEnabled && !config.supabaseUrl) return DEMO_TUTORIALS;

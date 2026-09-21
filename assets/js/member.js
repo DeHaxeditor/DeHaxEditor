@@ -8,7 +8,7 @@
   const isGuest=()=>state.guest||state.profile?.role==='guest';
   const isPro=()=>{if(state.profile?.role==='admin')return true;if(state.profile?.plan!=='pro')return false;const status=String(state.profile?.subscription_status||'').toLowerCase(),expiry=state.profile.access_expires_at?new Date(state.profile.access_expires_at).getTime():null;if(status==='canceled')return Number.isFinite(expiry)&&expiry>Date.now();if(!['authorized','active','trialing','manual','pix_active','semester_active'].includes(status))return false;return !expiry||expiry>Date.now()};
   const canAccess=item=>item.access_level!=='pro'||isPro();
-  const assetVisible=a=>a?.status==='published'&&(!a.category_id||state.categories.some(c=>c.id===a.category_id))&&(!a.subcategory_id||state.subcategories.some(x=>x.id===a.subcategory_id));
+  const assetVisible=a=>a?.status==='published'&&(!state.categories.length||!a.category_id||state.categories.some(c=>c.id===a.category_id))&&(!state.subcategories.length||!a.subcategory_id||state.subcategories.some(x=>x.id===a.subcategory_id));
   const mediaGlyph=t=>({audio:'♪',video:'▶',image:'◇',archive:'ZIP',project:'PR'}[t]||'✦');
   const daysUntil=iso=>Math.ceil((new Date(iso).getTime()-Date.now())/86400000);
   function renderRenewalNotice(){
@@ -59,7 +59,7 @@
   function renderLibrary(){renderPacks();renderLibraryHierarchy();$$('[data-library-filter]').forEach(b=>{const k=b.dataset.libraryFilter,active=k==='free'?state.freeOnly:k===state.orderFilter;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false')});const all=filteredAssets(),list=all.slice(0,state.libraryLimit);if(state.inlineAudioId&&!all.some(a=>String(a.id)===String(state.inlineAudioId)))state.inlineAudioId='',state.inlineAudioUrl='';const presets=list.filter(isLightroomPreset),visual=list.filter(a=>!isLightroomPreset(a)&&(a.media_type==='video'||a.media_type==='image')),rows=list.filter(a=>!isLightroomPreset(a)&&a.media_type!=='video'&&a.media_type!=='image');$('#assetVisualGrid').innerHTML=[...presets.map(presetAssetCard),...visual.map(visualAssetCard)].join('');$('#assetVisualGrid').hidden=!(presets.length+visual.length);$('#assetList').innerHTML=rows.map(assetRow).join('');$('#assetList').hidden=!rows.length;$('#libraryEmpty').hidden=!!all.length;const more=$('#libraryLoadMore'),moreBtn=$('#libraryLoadMoreBtn'),meta=$('#libraryLoadMoreMeta');if(more&&moreBtn&&meta){const hasMore=all.length>list.length;more.hidden=!hasMore;meta.textContent=hasMore?`Mostrando ${list.length} de ${all.length} itens`:'';moreBtn.onclick=()=>{state.libraryLimit+=state.libraryBatch;renderLibrary()}}if(visual.length)hydrateVisualPreviews();bindDynamic();mountInlineAudio()}
     function tutorialCard(t){const accessLocked=!canAccess(t),del=tutorialUnlock(t),locked=accessLocked||del.locked;let label=accessLocked?'🔒 CONTEÚDO PRO':del.scheduled?`⏱ ${del.label}`:'▶ ASSISTIR';return `<article class="tutorial-card ${locked?'locked':''}" data-tutorial="${t.id}"><div class="tutorial-thumb">${t.thumbnail_url?`<img src="${esc(t.thumbnail_url)}" alt="">`:'<div class="play-big"></div>'}<span class="access-badge ${t.access_level==='pro'?'pro':'free'}">${esc((t.access_level||'free').toUpperCase())}</span></div><div class="tutorial-body"><div class="tutorial-meta"><span>${esc(t.category||'Tutorial')}</span><span>${esc(t.duration_label||'')}</span></div><h3>${esc(t.title)}</h3><p>${esc(t.description||'')}</p>${Number(t.unlock_after_days||0)>0?`<span class="delayed-chip">Bônus com liberação em ${Number(t.unlock_after_days)} dias</span>`:''}<button class="btn ${locked?'dark':'primary'}" style="width:100%;margin-top:10px" data-play-tutorial="${t.id}">${esc(label)}</button></div></article>`}
 
-  function renderHome(){const pub=state.assets.filter(assetVisible);$('#assetCount').textContent=pub.length;$('#tutorialCount').textContent=state.tutorials.filter(t=>t.status==='published').length;$('#favoriteCount').textContent=state.favorites.size;$('#categoryCount').textContent=state.categories.filter(c=>c.status!=='paused').length||new Set(pub.map(a=>a.category).filter(Boolean)).size;$('#featuredAssets').innerHTML=(pub.filter(a=>a.featured).slice(0,6).length?pub.filter(a=>a.featured).slice(0,6):pub.slice(0,6)).map(assetCard).join('')||'<div class="empty">Nenhum asset publicado ainda.</div>';$('#recentQuick').innerHTML=pub.slice(0,4).map(a=>`<div class="quick"><span class="quick-ico">${mediaGlyph(a.media_type)}</span><span><b>${esc(a.title)}</b><small>${esc(a.category||'Asset')} · ${(a.access_level||'free').toUpperCase()}</small></span></div>`).join('')||'<div class="empty">O biblioteca ainda está vazio.</div>'}
+  function renderHome(){const pub=state.assets.filter(assetVisible),recent=[...pub].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));$('#assetCount').textContent=pub.length;$('#tutorialCount').textContent=state.tutorials.filter(t=>t.status==='published').length;$('#favoriteCount').textContent=state.favorites.size;$('#categoryCount').textContent=state.categories.filter(c=>c.status!=='paused').length||new Set(pub.map(a=>a.category).filter(Boolean)).size;$('#featuredAssets').innerHTML=(pub.filter(a=>a.featured).slice(0,6).length?pub.filter(a=>a.featured).slice(0,6):pub.slice(0,6)).map(assetCard).join('')||'<div class="empty">Nenhum asset publicado ainda.</div>';$('#recentQuick').innerHTML=recent.slice(0,4).map(a=>`<div class="quick"><span class="quick-ico">${mediaGlyph(a.media_type)}</span><span><b>${esc(a.title)}</b><small>${esc(a.category||'Asset')} · ${(a.access_level||'free').toUpperCase()}</small></span></div>`).join('')||'<div class="empty">A biblioteca ainda está vazia.</div>'}
   function renderTutorials(){const list=state.tutorials.filter(t=>t.status==='published');$('#tutorialGrid').innerHTML=list.map(tutorialCard).join('')||'<div class="empty">Nenhum tutorial publicado ainda.</div>';bindDynamic()}
   function renderFavorites(){const list=state.assets.filter(a=>state.favorites.has(a.id)&&assetVisible(a));$('#favoriteGrid').innerHTML=list.map(assetCard).join('')||'<div class="empty">Você ainda não favoritou nenhum asset.</div>';bindDynamic()}
   function membershipTierClient(){if(state.profile?.role==='admin')return 'admin';if(!isPro())return 'free';const status=String(state.profile?.subscription_status||'').toLowerCase();if(status==='semester_active')return 'semester';return 'monthly'}
@@ -145,23 +145,93 @@
   $('#refreshAccount').onclick=()=>loadAccountOverview(true);$('#saveAccountProfile').onclick=async()=>{const b=$('#saveAccountProfile'),name=$('#accountNameInput').value.trim();b.disabled=true;b.textContent='SALVANDO...';try{const d=await DehaxAPI.updateAccount({action:'profile',displayName:name});state.profile.display_name=d.displayName;renderIdentity();toast('Dados atualizados.')}catch(e){toast(e.message,'error')}finally{b.disabled=false;b.textContent='SALVAR DADOS'}};
   $('#changeAccountPassword').onclick=async()=>{const b=$('#changeAccountPassword'),p1=$('#accountNewPassword').value,p2=$('#accountConfirmPassword').value;if(p1!==p2){toast('As duas senhas precisam ser iguais.','error');return}b.disabled=true;b.textContent='ATUALIZANDO...';try{await DehaxAPI.updateAccount({action:'password',password:p1});$('#accountNewPassword').value='';$('#accountConfirmPassword').value='';toast('Senha atualizada com sucesso.')}catch(e){toast(e.message,'error')}finally{b.disabled=false;b.textContent='ATUALIZAR SENHA'}};
 
+  const withDeadline=(promise,fallback,ms=7000)=>new Promise(resolve=>{
+    let settled=false;
+    const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value)};
+    const timer=setTimeout(()=>finish(fallback),ms);
+    Promise.resolve(promise).then(finish).catch(()=>finish(fallback));
+  });
+
+  let secondaryHydrationRunning=false;
+  async function hydrateSecondary(user){
+    if(secondaryHydrationRunning)return;
+    secondaryHydrationRunning=true;
+    try{
+      const [allAssets,tutorials,categories,subs,links,tags,favs,profile]=await Promise.all([
+        withDeadline(DehaxAPI.getAllAssets(),[],15000),
+        withDeadline(DehaxAPI.getTutorials(),[],10000),
+        withDeadline(DehaxAPI.getCategories(),[],8000),
+        withDeadline(DehaxAPI.getSubcategories(),[],8000),
+        withDeadline(DehaxAPI.getSubcategoryLinks(),[],8000),
+        withDeadline(DehaxAPI.getCategoryTags(),[],8000),
+        user?withDeadline(DehaxAPI.getFavorites(),[],8000):Promise.resolve([]),
+        user?withDeadline(DehaxAPI.currentProfile(),null,8000):Promise.resolve(null)
+      ]);
+
+      if(allAssets.length)state.assets=allAssets;
+      if(tutorials.length)state.tutorials=tutorials;
+      if(categories.length)state.categories=categories;
+      if(subs.length)state.subcategories=subs;
+      if(links.length)state.subcategoryLinks=links;
+      if(tags.length)state.categoryTags=tags;
+      if(user)state.favorites=new Set(favs||[]);
+      if(profile){
+        state.profile={...profile,email:profile.email||user?.email,user_metadata:user?.user_metadata};
+        if(state.profile.is_suspended){toast('Esta conta está temporariamente suspensa.','error');}
+      }
+      await withDeadline(settings(),null,8000);
+      applySettings();
+      if(!state.categoryId)state.categoryId=(state.categories.find(c=>String(c.name).toLowerCase()==='sfx')||state.categories[0]||{}).id||'';
+      const requestedPack=new URLSearchParams(location.search).get('pack');
+      if(requestedPack){const found=state.packs.find(p=>String(p.slug||'').toLowerCase()===String(requestedPack).toLowerCase()&&p.status!=='paused');if(found){state.activePackId=found.id;state.categoryId=''}}
+      renderAll();
+      window.DehaxUI?.enhanceAll();
+    }catch(e){console.warn('DeHax secondary hydration',e)}
+    finally{secondaryHydrationRunning=false}
+  }
+
   async function init(){try{
-    const userPromise=DehaxAPI.currentUser();
-    const dataPromise=Promise.all([DehaxAPI.getAssets(),DehaxAPI.getTutorials(),DehaxAPI.getCategories(),DehaxAPI.getSubcategories(),DehaxAPI.getSubcategoryLinks(),DehaxAPI.getCategoryTags()]);
-    const [user,[assets,tutorials,categories,subs,links,tags]]=await Promise.all([userPromise,dataPromise]);
-    let favs=[];
+    const loading=$('#loading');
+    if(loading)loading.textContent='Carregando biblioteca...';
+
+    const [user,assets,categories,subs]=await Promise.all([
+      withDeadline(DehaxAPI.currentUser(),null,4500),
+      withDeadline(DehaxAPI.getAssets({limit:300}),[],8000),
+      withDeadline(DehaxAPI.getCategories(),[],6000),
+      withDeadline(DehaxAPI.getSubcategories(),[],6000)
+    ]);
+
     if(user){
-      const [profile,userFavs]=await Promise.all([DehaxAPI.currentProfile(),DehaxAPI.getFavorites()]);if(!profile)throw new Error('Seu perfil ainda não foi criado.');
-      state.profile={...profile,email:profile.email||user.email,user_metadata:user.user_metadata};if(state.profile.is_suspended)throw new Error('Esta conta está temporariamente suspensa.');
-      favs=userFavs;
+      const profile=await withDeadline(DehaxAPI.currentProfile(),null,4500);
+      state.profile=profile
+        ?{...profile,email:profile.email||user.email,user_metadata:user.user_metadata}
+        :{id:user.id,email:user.email||'',display_name:user.user_metadata?.display_name||user.email?.split('@')[0]||'Editor',role:'member',plan:'free',subscription_status:'inactive',created_at:null,user_metadata:user.user_metadata};
+      if(state.profile.is_suspended)throw new Error('Esta conta está temporariamente suspensa.');
     }else{
-      state.guest=true;state.profile={role:'guest',plan:'free',subscription_status:'inactive',display_name:'Visitante',email:'',created_at:null};
+      state.guest=true;
+      state.profile={role:'guest',plan:'free',subscription_status:'inactive',display_name:'Visitante',email:'',created_at:null};
     }
-    state.assets=assets;state.tutorials=tutorials;state.categories=categories;state.subcategories=subs;state.subcategoryLinks=links;state.categoryTags=tags;state.categoryId=(categories.find(c=>String(c.name).toLowerCase()==='sfx')||categories[0]||{}).id||'';state.favorites=new Set(favs);
-    await settings();applySettings();
-    const requestedPack=new URLSearchParams(location.search).get('pack');if(requestedPack){const found=state.packs.find(p=>String(p.slug||'').toLowerCase()===String(requestedPack).toLowerCase()&&p.status!=='paused');if(found){state.activePackId=found.id;state.categoryId=''}}
-    $('#loading').remove();renderAll();window.DehaxUI?.enhanceAll();
-    const hash=location.hash.replace('#',''),allowed=['home','assets','tools','tutorials','favorites','community','account','support'];showView(allowed.includes(hash)?hash:(state.guest?'assets':'home'));
-  }catch(e){$('#loading').innerHTML=`<div class="empty"><b>Não foi possível abrir a biblioteca.</b><br><br>${esc(e.message)}<br><br><button class="btn ghost" type="button" onclick="location.reload()">Tentar novamente</button></div>`}}
+
+    state.assets=Array.isArray(assets)?assets:[];
+    state.tutorials=[];
+    state.categories=Array.isArray(categories)?categories:[];
+    state.subcategories=Array.isArray(subs)?subs:[];
+    state.subcategoryLinks=[];
+    state.categoryTags=[];
+    state.categoryId=(state.categories.find(c=>String(c.name).toLowerCase()==='sfx')||state.categories[0]||{}).id||'';
+    state.favorites=new Set();
+
+    if(loading)loading.remove();
+    renderAll();
+    window.DehaxUI?.enhanceAll();
+    const hash=location.hash.replace('#',''),allowed=['home','assets','tools','tutorials','favorites','community','account','support'];
+    showView(allowed.includes(hash)?hash:(state.guest?'assets':'home'));
+
+    // Do not block first paint on secondary data.
+    hydrateSecondary(user);
+  }catch(e){
+    const loading=$('#loading');
+    if(loading)loading.innerHTML=`<div class="empty"><b>Não foi possível abrir a biblioteca.</b><br><br>${esc(e.message||'Erro inesperado.')}<br><br><button class="btn ghost" type="button" onclick="location.reload()">Tentar novamente</button></div>`;
+  }}
   setTimeout(init,0);
 })();

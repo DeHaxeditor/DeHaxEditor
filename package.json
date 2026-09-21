@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-config.mjs",
+    "build": "node scripts/build-config.mjs && node scripts/check.mjs",
     "check": "node scripts/check.mjs"
   }
 }

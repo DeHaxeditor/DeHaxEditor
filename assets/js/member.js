@@ -146,13 +146,14 @@
   $('#changeAccountPassword').onclick=async()=>{const b=$('#changeAccountPassword'),p1=$('#accountNewPassword').value,p2=$('#accountConfirmPassword').value;if(p1!==p2){toast('As duas senhas precisam ser iguais.','error');return}b.disabled=true;b.textContent='ATUALIZANDO...';try{await DehaxAPI.updateAccount({action:'password',password:p1});$('#accountNewPassword').value='';$('#accountConfirmPassword').value='';toast('Senha atualizada com sucesso.')}catch(e){toast(e.message,'error')}finally{b.disabled=false;b.textContent='ATUALIZAR SENHA'}};
 
   async function init(){try{
-    const user=await DehaxAPI.currentUser();
-    const [assets,tutorials,categories,subs,links,tags]=await Promise.all([DehaxAPI.getAssets(),DehaxAPI.getTutorials(),DehaxAPI.getCategories(),DehaxAPI.getSubcategories(),DehaxAPI.getSubcategoryLinks(),DehaxAPI.getCategoryTags()]);
+    const userPromise=DehaxAPI.currentUser();
+    const dataPromise=Promise.all([DehaxAPI.getAssets(),DehaxAPI.getTutorials(),DehaxAPI.getCategories(),DehaxAPI.getSubcategories(),DehaxAPI.getSubcategoryLinks(),DehaxAPI.getCategoryTags()]);
+    const [user,[assets,tutorials,categories,subs,links,tags]]=await Promise.all([userPromise,dataPromise]);
     let favs=[];
     if(user){
-      const profile=await DehaxAPI.currentProfile();if(!profile)throw new Error('Seu perfil ainda não foi criado.');
+      const [profile,userFavs]=await Promise.all([DehaxAPI.currentProfile(),DehaxAPI.getFavorites()]);if(!profile)throw new Error('Seu perfil ainda não foi criado.');
       state.profile={...profile,email:profile.email||user.email,user_metadata:user.user_metadata};if(state.profile.is_suspended)throw new Error('Esta conta está temporariamente suspensa.');
-      favs=await DehaxAPI.getFavorites();
+      favs=userFavs;
     }else{
       state.guest=true;state.profile={role:'guest',plan:'free',subscription_status:'inactive',display_name:'Visitante',email:'',created_at:null};
     }

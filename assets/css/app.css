@@ -80,3 +80,34 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:250px 1fr;m
 /* V3.0.4 selector alignment */
 #libraryPackGrid.pack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:12px;margin-top:10px}#libraryPackGrid.pack-grid[hidden]{display:none}#activePackBar.active-pack-bar>button{flex:0 0 auto}#activePackBar.active-pack-bar>div{min-width:0}#activePackBar.active-pack-bar>div>span{display:block;color:#61dff2;font:900 7px monospace;letter-spacing:.1em;text-transform:uppercase}#activePackBar.active-pack-bar>div>strong{display:block;color:#fff;font-size:13px;margin-top:2px}#activePackBar.active-pack-bar>div>small{display:block;color:#657482;font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:800px){#libraryPackGrid.pack-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+
+
+/* DeHax Acervo + Apps v3.1 */
+.library-tools-v2{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:12px;align-items:center;margin-bottom:12px}
+.library-quick-filters{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.library-filter-toggle{appearance:none;border:1px solid rgba(255,255,255,.1);background:#080d13;color:#778694;border-radius:999px;min-height:38px;padding:0 13px;font:900 9px Inter;letter-spacing:.08em;cursor:pointer;transition:.18s}
+.library-filter-toggle:hover{color:#eafaff;border-color:rgba(0,217,255,.3);transform:translateY(-1px)}
+.library-filter-toggle.active{color:#031014;background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 22px rgba(0,217,255,.15)}
+.library-filter-toggle[data-library-filter="new"].active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 22px rgba(255,41,77,.16)}
+.library-sort-hint{grid-column:1/-1;color:#52616e;font-size:9px;line-height:1.5;margin-top:-4px}
+.tools-product-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tool-product-card{display:grid;grid-template-columns:minmax(210px,.78fr) minmax(0,1.22fr);gap:20px;border:1px solid rgba(255,255,255,.085);border-radius:22px;padding:18px;background:linear-gradient(145deg,rgba(255,255,255,.025),rgba(255,255,255,.006));overflow:hidden}
+.tool-cover{position:relative;min-height:360px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#060a0f}
+.tool-cover>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+.tool-cover-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;background:radial-gradient(circle at 72% 18%,rgba(0,217,255,.32),transparent 35%),radial-gradient(circle at 20% 85%,rgba(255,41,77,.22),transparent 36%),linear-gradient(155deg,#07111d,#04070b)}
+.tool-cover-fallback.purple{background:radial-gradient(circle at 65% 17%,rgba(153,62,255,.46),transparent 38%),radial-gradient(circle at 20% 84%,rgba(89,0,195,.35),transparent 36%),linear-gradient(155deg,#170824,#05040a)}
+.tool-cover-fallback b{font:900 clamp(38px,4vw,60px)/.83 "Barlow Condensed";letter-spacing:-.04em;text-transform:uppercase;text-shadow:0 0 24px rgba(0,217,255,.18)}
+.tool-cover-fallback.purple b{text-shadow:0 0 26px rgba(166,70,255,.35)}
+.tool-cover-fallback small{margin-top:12px;font:900 8px monospace;letter-spacing:.2em;color:#8394a2}
+.tool-product-body{min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.tool-product-body h2{font:900 clamp(30px,3.7vw,47px)/.92 "Barlow Condensed";text-transform:uppercase;letter-spacing:-.035em;margin:13px 0}
+.tool-product-body h2 span:last-child{font-size:.45em;color:#647481;letter-spacing:.03em}
+.tool-product-body p{margin:0;color:#7f8d9b;line-height:1.65;font-size:11px}
+.tool-product-body ul{list-style:none;padding:0;margin:18px 0;display:grid;gap:9px;color:#a7b3bd;font-size:10px}
+.tool-product-body li:before{content:"✓";color:var(--cyan);font-weight:900;margin-right:8px}
+.tool-download-btn{width:100%;margin-top:auto;min-height:48px}
+.tool-download-btn.disabled,[data-manager-download][aria-disabled="true"],[data-plugin-download][aria-disabled="true"]{opacity:.45;pointer-events:none;filter:saturate(.5)}
+.tool-product-body>small{display:block;color:#53616d;font-size:8px;margin-top:8px;line-height:1.45}
+@media(max-width:1180px){.tools-product-grid{grid-template-columns:1fr}.tool-product-card{grid-template-columns:minmax(220px,.7fr) 1.3fr}}
+@media(max-width:800px){.library-tools-v2{grid-template-columns:1fr}.library-quick-filters{justify-content:flex-start}.tool-product-card{grid-template-columns:1fr}.tool-cover{min-height:430px}.tool-product-body{padding:3px 2px}.tool-download-btn{margin-top:8px}}
+@media(max-width:520px){.library-filter-toggle{flex:1;min-width:calc(50% - 5px)}.tool-cover{min-height:350px}}

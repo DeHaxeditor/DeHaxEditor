@@ -4,6 +4,18 @@
   function onScroll(){header?.classList.toggle('scrolled',scrollY>20);const d=document.documentElement,max=d.scrollHeight-d.clientHeight;if(progress)progress.style.width=(max?d.scrollTop/max*100:0)+'%';if(innerWidth>950){$$('.parallax').forEach(el=>{const r=el.getBoundingClientRect(),speed=Number(el.dataset.speed||.03);el.style.transform=`perspective(1000px) rotateY(-4deg) rotateX(2deg) translateY(${r.top*speed}px)`})}}
   addEventListener('scroll',onScroll,{passive:true});onScroll();
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});$$('.reveal').forEach(x=>io.observe(x));
+
+  function initEditorParallax(){
+    const stage=$('#communityEditorStage'),card=$('#communityEditorCard');
+    if(!stage||!card||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    let raf=0,targetX=0,targetY=0,currentX=0,currentY=0;
+    const monitor=card.querySelector('.editor-monitor'),timeline=card.querySelector('.editor-timeline');
+    const draw=()=>{currentX+=(targetX-currentX)*.16;currentY+=(targetY-currentY)*.16;card.style.transform=`rotateX(${(-currentY*10).toFixed(2)}deg) rotateY(${(currentX*14).toFixed(2)}deg) translate3d(${(currentX*13).toFixed(1)}px,${(currentY*9).toFixed(1)}px,0)`;if(monitor)monitor.style.transform=`translate3d(${(currentX*8).toFixed(1)}px,${(currentY*6).toFixed(1)}px,28px)`;if(timeline)timeline.style.transform=`translate3d(${(-currentX*7).toFixed(1)}px,${(-currentY*5).toFixed(1)}px,28px)`;if(Math.abs(targetX-currentX)>.002||Math.abs(targetY-currentY)>.002)raf=requestAnimationFrame(draw);else raf=0};
+    const kick=()=>{if(!raf)raf=requestAnimationFrame(draw)};
+    stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();targetX=Math.max(-1,Math.min(1,(e.clientX-r.left)/r.width*2-1));targetY=Math.max(-1,Math.min(1,(e.clientY-r.top)/r.height*2-1));kick()});
+    stage.addEventListener('pointerleave',()=>{targetX=0;targetY=0;kick()});
+  }
+
   async function getFallback(){try{const r=await fetch('/content/community.json',{cache:'no-store'});return r.ok?await r.json():{}}catch{return {}}}
   const cleanId=v=>{const m=String(v||'').match(/(?:youtu\.be\/|v=|embed\/)?([A-Za-z0-9_-]{6,})/);return m?m[1]:''};
   const money=v=>Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -21,7 +33,7 @@
   async function loadSettings(){
     let s=await getFallback();
     if(window.DehaxAPI?.config?.supabaseUrl){try{const r=await window.DehaxAPI.supabaseFetch('/rest/v1/app_settings?select=key,value');if(r.ok){for(const row of await r.json())s[row.key]=typeof row.value==='string'?row.value:(row.value?.value??row.value)}}catch{}}
-    communitySettings=s;
+    communitySettings=s;const portfolio=(s.public_site_content&&typeof s.public_site_content==='object')?s.public_site_content:{};const setImg=(id,url)=>{const img=$(id);if(!img)return;if(url){img.src=String(url);img.hidden=false;img.closest('.editor-monitor,.editor-timeline')?.classList.add('media-ready')}};setImg('#communityPreviewImage',portfolio.preview_image);setImg('#communityTimelineImage',portfolio.timeline_image);
     const free=benefitList(s.free_plan_benefits,['Conta na plataforma','Assets e aulas gratuitas','Visualização da biblioteca PRO']);if($('#freeBenefits'))$('#freeBenefits').innerHTML=free.map(x=>`<li>${String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':'&quot;',"'":'&#39;'}[c]))}</li>`).join('');
     renderProPlan();
     const txt=(id,val)=>{if($(id)&&val)$(id).textContent=String(val)};txt('#landingEyebrow',s.landing_eyebrow);txt('#landingCopy',s.landing_copy);txt('#landingCtaText',s.landing_cta_text);txt('#showcaseHeading',s.showcase_heading);for(let i=1;i<=3;i++)txt(`#showcaseTitle${i}`,s[`showcase_title_${i}`]);
@@ -33,5 +45,5 @@
   }
   document.addEventListener('click',e=>{const b=e.target.closest('[data-pro-plan]');if(!b)return;proPlan=b.dataset.proPlan;renderProPlan()});
   function preserveAttribution(){const p=new URLSearchParams(location.search),keep=['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid'];const a={};keep.forEach(k=>{if(p.get(k))a[k]=p.get(k)});if(Object.keys(a).length)sessionStorage.setItem('dehax_attribution',JSON.stringify(a));$$('a[href^="/entrar/"],a[href^="/checkout/"]').forEach(link=>{const u=new URL(link.href,location.origin);for(const [k,v] of Object.entries(a))u.searchParams.set(k,v);link.href=u.pathname+u.search})}
-  addEventListener('DOMContentLoaded',()=>{preserveAttribution();setTimeout(loadSettings,0)});
+  addEventListener('DOMContentLoaded',()=>{preserveAttribution();initEditorParallax();setTimeout(loadSettings,0)});
 })();

@@ -37,5 +37,12 @@
 
 [[redirects]]
   from = "/comunidade"
-  to = "/comunidade/"
+  to = "/"
   status = 301
+  force = true
+
+[[redirects]]
+  from = "/comunidade/"
+  to = "/"
+  status = 301
+  force = true

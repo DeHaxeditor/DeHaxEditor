@@ -21,8 +21,9 @@
   };
   const setDownload=(sel,url,emptyLabel)=>{
     document.querySelectorAll(sel).forEach(el=>{
+      if(!el.dataset.readyLabel)el.dataset.readyLabel=(el.textContent||'').trim();
       const ready=!!String(url||'').trim();
-      if(ready){el.href=String(url).trim();el.removeAttribute('aria-disabled');el.classList.remove('disabled');el.dataset.ready='1';}
+      if(ready){el.href=String(url).trim();el.removeAttribute('aria-disabled');el.classList.remove('disabled');el.dataset.ready='1';el.onclick=null;if(el.dataset.readyLabel)el.textContent=el.dataset.readyLabel;}
       else{el.href='#';el.setAttribute('aria-disabled','true');el.classList.add('disabled');el.dataset.ready='0';el.onclick=e=>{e.preventDefault();};if(emptyLabel)el.textContent=emptyLabel;}
     });
   };

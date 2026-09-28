@@ -36,6 +36,7 @@ const document = {
   querySelectorAll(selector) {
     if (selector.includes('img[data-brand-logo]')) return logos;
     if (selector === 'link[data-brand-logo]') return [icon];
+    if (selector === '.brand-fallback') return [node('brand-fallback')];
     if (selector === '[data-public-upload]') return [publicUpload];
     return [];
   }
@@ -74,6 +75,7 @@ await loadBrand();
 const brand = context.window.DehaxBrand;
 assert.equal(logos[0].src, db.public_site_content.logo, 'Legacy public uploads must appear on platform pages.');
 assert.equal(icon.href, logos[0].src);
+assert.equal(node('brand-fallback').style.display, 'none', 'Legacy flex styling must not reveal the old mark.');
 assert.ok(requests.every(r => r.options.cache === 'no-store'), 'Settings and local content must be revalidated.');
 assert.equal(brand.normalizeLogo('/assets/brand/dehax-logo.png?v=old'), brand.DEFAULT_LOGO);
 assert.equal(brand.normalizeLogo('javascript:alert(1)'), brand.DEFAULT_LOGO);

@@ -35,7 +35,10 @@
       img.src = logo;
       img.hidden = false;
     });
-    document.querySelectorAll('.brand-fallback').forEach(el => { el.hidden = true; });
+    document.querySelectorAll('.brand-fallback').forEach(el => {
+      el.hidden = true;
+      el.style.display = 'none';
+    });
     document.querySelectorAll('link[data-brand-logo]').forEach(icon => { icon.href = logo; });
   }
 

@@ -25,6 +25,7 @@ function node(selector) {
 }
 
 const document = {
+  readyState: 'loading', addEventListener: noop,
   querySelector: node, querySelectorAll: () => [],
   createElement: () => node('__created'),
   documentElement: { style: { setProperty: noop } }
@@ -35,16 +36,19 @@ const api = {
   token: () => 'demo-token'
 };
 
-vm.runInNewContext(source, {
+const context = vm.createContext({
   document,
   window: { DehaxUI: { enhanceAll: noop, refreshSelect: noop } },
   DehaxAPI: api,
-  location: { hash: '', href: '' },
+  location: { hash: '', href: '', origin: 'https://dehax.example' },
+  URL,
   history: { replaceState: noop },
   addEventListener: noop,
   setTimeout(callback) { if (!initCallback) initCallback = callback; return 1; },
   fetch: async () => ({ ok: true, json: async () => ({}) })
-}, { filename: 'assets/js/admin.js' });
+});
+vm.runInContext(fs.readFileSync(new URL('../assets/js/site-settings.js', import.meta.url), 'utf8'), context);
+vm.runInContext(source, context, { filename: 'assets/js/admin.js' });
 
 assert.equal(typeof initCallback, 'function', 'Admin must schedule initialization.');
 await initCallback();

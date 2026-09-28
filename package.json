@@ -5,6 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-config.mjs && npm run check",
-    "check": "node scripts/check.mjs && node scripts/admin-boot-smoke.mjs"
+    "check": "node scripts/check.mjs && node scripts/admin-boot-smoke.mjs && node scripts/branding-smoke.mjs"
   }
 }

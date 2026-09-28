@@ -40,7 +40,7 @@ function render(content){
   document.title=`${content.site_name||'DeHax Editor'} — Video Editor`;
   $('#statusText').textContent=content.status||''; $('#heroLine1').textContent=content.hero_line_1||''; $('#heroLine2').textContent=content.hero_line_2||''; $('#heroLine3').textContent=content.hero_line_3||''; $('#heroCopy').textContent=content.hero_text||'';
   $('#heroPrimary').childNodes[0].nodeValue=(content.hero_primary||'Ver trabalhos')+' '; $('#heroSecondary').childNodes[0].nodeValue=(content.hero_secondary||'Vamos trabalhar juntos')+' ';
-  const brandLogo=$('#brandLogo'),fallback=$('.brand-fallback'); if(content.logo){brandLogo.src=pathFix(content.logo);brandLogo.hidden=false;fallback.hidden=true}else{brandLogo.hidden=true;fallback.hidden=false}
+  // Site branding is applied by site-settings.js on every page.
   setImage($('#previewImage'),$('#previewEmpty'),content.preview_image); setImage($('#timelineImage'),$('#timelineEmpty'),content.timeline_image);
   const mar=(content.marquee||DEFAULT_CONTENT.marquee).map((x,i)=>`<b>${esc(x)}</b> ✦ `).join(''); $('#marquee').innerHTML=`<span>${mar}&nbsp;</span><span>${mar}&nbsp;</span>`;
   $('#workTitle').innerHTML=nlTitle(content.work_title||''); $('#workCopy').textContent=content.work_text||'';

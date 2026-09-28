@@ -241,7 +241,37 @@
 
   async function saveSettings(vals,msg){try{if(state.demo)Object.assign(state.settings,vals);else for(const [key,value] of Object.entries(vals))await DehaxAPI.adminUpsert('app_settings',{key,value},'key');if(Object.hasOwn(vals,'brand_logo_url'))applyCurrentBrandLogo(vals.brand_logo_url);await refresh();toast(msg)}catch(e){toast(e.message,'error')}}
   $('#savePublicSite').onclick=async()=>{const c=state.publicSite||{};Object.assign(c,{site_name:$('#pSiteName').value.trim(),status:$('#pStatus').value.trim(),hero_line_1:$('#pHero1').value.trim(),hero_line_2:$('#pHero2').value.trim(),hero_line_3:$('#pHero3').value.trim(),hero_text:$('#pHeroText').value.trim(),hero_primary:$('#pHeroPrimary').value.trim(),hero_secondary:$('#pHeroSecondary').value.trim(),logo:$('#pLogo').value.trim(),preview_image:$('#pPreviewImage').value.trim(),timeline_image:$('#pTimelineImage').value.trim(),work_title:$('#pWorkTitle').value.trim(),work_text:$('#pWorkText').value.trim(),marquee:splitLines($('#pMarquee').value),skills_title:$('#pSkillsTitle').value.trim(),skills_text:$('#pSkillsText').value.trim(),skills:pairLines($('#pSkills').value,'name','use'),about_title:$('#pAboutTitle').value.trim(),about_image:$('#pAboutImage').value.trim(),about_paragraphs:String($('#pAboutParagraphs').value||'').split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean),stats:pairLines($('#pStats').value,'value','label'),contact_title:$('#pContactTitle').value.trim(),contact_text:$('#pContactText').value.trim(),email:$('#pEmail').value.trim(),instagram:$('#pInstagram').value.trim(),whatsapp:$('#pWhatsapp').value.trim(),footer_tools:$('#pFooterTools').value.trim()});await saveSettings({public_site_content:c},'Site público atualizado.');};
-  const publicUploads={logo:['#pLogoFile','#pLogo','#pLogoProgress'],preview:['#pPreviewFile','#pPreviewImage','#pPreviewProgress'],timeline:['#pTimelineFile','#pTimelineImage','#pTimelineProgress'],about:['#pAboutFile','#pAboutImage','#pAboutProgress']};$$('[data-public-upload]').forEach(btn=>btn.onclick=async()=>{const cfg=publicUploads[btn.dataset.publicUpload],file=$(cfg[0]).files[0];if(!file){toast('Escolha uma imagem.','error');return}try{const d=await uploadFile(file,'site',cfg[2]);if(!d?.publicUrl)throw new Error('Configure R2_MEDIA_PUBLIC_URL para publicar imagens do site.');$(cfg[1]).value=d.publicUrl;toast('Imagem enviada. Clique em SALVAR SITE PÚBLICO.')}catch(e){toast(e.message,'error')}});
+
+  const publicUploads={
+    logo:['#pLogoFile','#pLogo','#pLogoProgress'],
+    preview:['#pPreviewFile','#pPreviewImage','#pPreviewProgress'],
+    timeline:['#pTimelineFile','#pTimelineImage','#pTimelineProgress'],
+    about:['#pAboutFile','#pAboutImage','#pAboutProgress']
+  };
+  $('[data-public-upload]').forEach(button=>button.onclick=async()=>{
+    const kind=button.dataset.publicUpload,cfg=publicUploads[kind],file=$(cfg[0]).files[0];
+    if(!file){toast('Escolha uma imagem.','error');return}
+    if(!file.type.startsWith('image/')||file.size>10*1024*1024){toast('Envie uma imagem de até 10 MB.','error');return}
+    button.disabled=true;button.textContent='ENVIANDO...';
+    try{
+      const data=await uploadFile(file,'site',cfg[2]);
+      if(!data?.publicUrl)throw Error('Configure R2_MEDIA_PUBLIC_URL para publicar imagens do site.');
+      $(cfg[1]).value=data.publicUrl;
+      if(kind==='logo'){
+        // A logo nao depende de um segundo clique em SALVAR SITE PUBLICO.
+        const next={...(state.publicSite||{}),logo:data.publicUrl};
+        if(!state.demo)await DehaxAPI.adminUpsert('app_settings',{key:'public_site_content',value:next},'key');
+        state.publicSite=next;
+        state.settings.public_site_content=next;
+        $('#pLogoFile').value='';
+        toast('Logo do portfólio enviada e salva.');
+      }else toast('Imagem enviada. Clique em SALVAR SITE PÚBLICO.');
+    }catch(err){toast(err.message||'Falha ao enviar imagem.','error')}
+    finally{button.disabled=false;button.textContent=kind==='logo'?'ENVIAR IMAGEM':'ENVIAR'}
+  });
+  $('#pLogoFile').addEventListener('change',()=>{
+    if($('#pLogoFile').files.length)$('[data-public-upload="logo"]')?.click();
+  });
   $('#saveSiteSettings').onclick=()=>saveSettings({brand_red:$('#sBrandRed').value,brand_cyan:$('#sBrandCyan').value,brand_background:$('#sBrandBg').value,brand_logo_url:$('#sBrandLogo').value.trim(),landing_eyebrow:$('#sLandingEyebrow').value.trim(),landing_title:$('#sLandingTitle').value.trim(),landing_copy:$('#sLandingCopy').value.trim(),landing_cta_text:$('#sLandingCta').value.trim(),hero_youtube_id:youtubeId($('#sHeroYoutube').value),showcase_youtube_1:youtubeId($('#sShowVideo1').value),showcase_youtube_2:youtubeId($('#sShowVideo2').value),showcase_youtube_3:youtubeId($('#sShowVideo3').value),showcase_title_1:$('#sShowTitle1').value.trim(),showcase_title_2:$('#sShowTitle2').value.trim(),showcase_title_3:$('#sShowTitle3').value.trim(),discord_url:$('#sDiscord').value.trim(),whatsapp_url:$('#sWhatsapp').value.trim(),meta_pixel_id:$('#sMetaPixel').value.trim(),pro_price:$('#sProMonthlyPrice').value.trim(),pro_monthly_price:$('#sProMonthlyPrice').value.trim(),pro_semester_monthly_equiv:$('#sProSemesterMonthly').value.trim(),pro_semester_total:$('#sProSemesterTotal').value.trim(),pix_access_days:Math.max(1,Number($('#sPixDays').value||30)),renewal_notice_days:Math.max(1,Number($('#sRenewalDays').value||7)),free_plan_benefits:splitLines($('#sFreeBenefits').value),monthly_plan_benefits:splitLines($('#sMonthlyBenefits').value),semester_plan_benefits:splitLines($('#sSemesterBenefits').value),support_email:$('#sSupportEmail').value.trim(),business_name:$('#sBusinessName').value.trim(),business_document:$('#sBusinessDocument').value.trim(),manager_version:$('#sManagerVersion').value.trim()||'1.1.0',manager_download_url:$('#sManagerDownloadUrl').value.trim(),manager_sha256:$('#sManagerSha').value.trim().toLowerCase(),manager_file_size:$('#sManagerFileSize').value.trim()||'≈ 77 MB',manager_cover_url:$('#sManagerCoverUrl').value.trim(),plugin_name:$('#sPluginName').value.trim()||'Gameplay Pack',plugin_version:$('#sPluginVersion').value.trim()||'1.0.0',plugin_download_url:$('#sPluginDownloadUrl').value.trim(),plugin_cover_url:$('#sPluginCoverUrl').value.trim()},'Site atualizado.');
   $('#saveSettings').onclick=()=>saveSettings({download_daily_limit:Number($('#sDownloadLimit').value||1000),global_downloads_enabled:$('#sGlobalDownloads').checked,maintenance_message:$('#sMaintenance').value.trim()},'Operação atualizada.');
   $('#saveAiAudioSettings').onclick=()=>saveSettings({ai_audio_enabled:$('#sAiEnabled').checked,ai_audio_provider:'elevenlabs',ai_audio_pro_tokens_per_cycle:Math.max(0,Number($('#sAiTokens').value||0)),ai_audio_token_cycle_days:Math.max(1,Number($('#sAiCycleDays').value||30)),ai_audio_narration_hq_tokens_per_1000_chars:Math.max(1,Number($('#sAiNarrationHqCost').value||55)),ai_audio_narration_flash_tokens_per_1000_chars:Math.max(1,Number($('#sAiNarrationFlashCost').value||28)),ai_audio_narration_tokens_per_1000_chars:Math.max(1,Number($('#sAiNarrationHqCost').value||55)),ai_audio_sfx_tokens_per_second:Math.max(1,Number($('#sAiSfxCost').value||1)),ai_audio_storage_days:Math.max(1,Number($('#sAiStorageDays').value||30)),ai_audio_storage_gb_per_user:Math.max(.1,Number($('#sAiStorageGb').value||1)),ai_audio_max_narration_chars:Math.max(100,Number($('#sAiMaxNarrationChars').value||5000)),ai_audio_max_sfx_seconds:Math.max(1,Math.min(30,Number($('#sAiMaxSfxSeconds').value||30))),ai_audio_voice_limit:Math.max(1,Math.min(100,Number($('#sAiVoiceLimit').value||30)))},'Configuração da IA de áudio atualizada.');

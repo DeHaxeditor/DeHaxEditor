@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-config.mjs && node scripts/check.mjs",
+    "build": "node scripts/build-config.mjs && npm run check",
     "check": "node scripts/check.mjs && node scripts/admin-boot-smoke.mjs"
   }
 }
